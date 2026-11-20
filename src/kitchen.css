@@ -973,8 +973,22 @@ select {
     margin-top: 24px;
   }
   .shelf-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "text art"
+      "btn art";
+    align-items: center;
+    gap: 14px 10px;
     padding: 22px 16px;
     border-radius: 17px;
+  }
+  .hero-text {
+    grid-area: text;
+  }
+  .shelf-hero .hero-btn {
+    grid-area: btn;
+    justify-self: start;
   }
   .hero-text p {
     font-size: 13px;
@@ -984,7 +998,9 @@ select {
     padding: 8px 10px;
   }
   .hero-art {
-    display: none;
+    grid-area: art;
+    width: clamp(150px, 42vw, 240px);
+    margin: -10px -6px -10px 0;
   }
   .art-banner {
     margin-bottom: 18px;
@@ -1057,12 +1073,6 @@ select {
   }
   .food-row .expiry {
     flex-shrink: 0;
-  }
-}
-@media (max-width: 480px) {
-  .shelf-hero {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 @media (max-width: 390px) {
