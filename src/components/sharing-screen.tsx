@@ -84,17 +84,19 @@ export function SharingScreen({ h, me, today, available, incoming, run, saving }
           const pending = outgoing.some((r) => r.itemId === f.id && r.status === "pending");
           return (
             <article className="panel grab-card" key={f.id}>
-              <div className="section-title">
+              <div className="grab-heading">
                 <FoodArt name={f.name} />
+                <div className="grab-details">
+                  <h3>{f.name}</h3>
+                  <p>
+                    {f.quantity} · {memberName(f.owner)}’s shelf
+                  </p>
+                </div>
                 <span className={"expiry " + timing(f, today).colour}>
                   <i />
                   {timing(f, today).text}
                 </span>
               </div>
-              <h3>{f.name}</h3>
-              <p>
-                {f.quantity} · {memberName(f.owner)}’s shelf
-              </p>
               <div className="grab-bottom">
                 <strong>{price === 0 ? "Free" : price + " pts"}</strong>
                 <button

@@ -34,7 +34,7 @@ export function LeaderboardScreen({
             {balance(h, me.id)} <small>pts</small>
           </h2>
         </div>
-        <button className="btn hero-btn" onClick={openChores}>
+        <button className="btn secondary" onClick={openChores}>
           <ListChecks size={19} />
           Log chore
         </button>

@@ -1,6 +1,5 @@
 import { useId, type ReactNode } from "react";
 import {
-  Sprout,
   House as HouseIcon,
   Apple,
   Milk,
@@ -18,10 +17,8 @@ import type { Member } from "@/lib/household";
 export function Brand() {
   return (
     <span className="brand">
-      <span className="brand-leaf">
-        <Sprout size={25} strokeWidth={2.3} />
-      </span>
-      Shelf Life<span className="brand-dot">.</span>
+      <span className="brand-mark" aria-hidden="true" />
+      Shelf Life
     </span>
   );
 }
@@ -41,20 +38,19 @@ export function Avatar({ member }: { member: Member }) {
 }
 export function FoodArt({ name }: { name: string }) {
   const list = [
-    [/yoghurt|cheese/i, MilkIcon, "lilac"],
-    [/milk/i, Milk, "blue"],
-    [/carrot/i, Carrot, "peach"],
-    [/spinach|cabbage|lettuce/i, Leaf, "sage"],
-    [/tomato|berry/i, Cherry, "rose"],
-    [/egg/i, Egg, "butter"],
-    [/lemon|lime/i, Citrus, "butter"],
-    [/pasta|bread|rice/i, Wheat, "peach"],
-    [/apple|pear/i, Apple, "sage"],
+    [/yoghurt|cheese/i, MilkIcon],
+    [/milk/i, Milk],
+    [/carrot/i, Carrot],
+    [/spinach|cabbage|lettuce/i, Leaf],
+    [/tomato|berry/i, Cherry],
+    [/egg/i, Egg],
+    [/lemon|lime/i, Citrus],
+    [/pasta|bread|rice/i, Wheat],
+    [/apple|pear/i, Apple],
   ] as const;
-  const [, Icon, colour] =
-    list.find(([re]) => re.test(name)) ?? ([null, PackageOpen, "sage"] as const);
+  const Icon = list.find(([re]) => re.test(name))?.[1] ?? PackageOpen;
   return (
-    <span aria-hidden="true" className={"food-art " + colour}>
+    <span aria-hidden="true" className="food-art">
       <Icon size={26} strokeWidth={1.7} />
     </span>
   );
