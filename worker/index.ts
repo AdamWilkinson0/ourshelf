@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { houseDate } from "../src/lib/household";
-import { dateResult, haulResult, maxImageBytes, photoSide } from "../src/lib/scan-contract";
+import {
+  dateResult,
+  haulResult,
+  maxHaulItems,
+  maxImageBytes,
+  photoSide,
+} from "../src/lib/scan-contract";
 import { scanSecret, verifyScanGrant } from "../src/lib/scan-grant";
 import { printedDate } from "./label-date";
 import { supportedJpeg } from "./photo";
@@ -38,7 +44,7 @@ const schemas = {
   haul: object({
     items: {
       type: "ARRAY",
-      maxItems: 80,
+      // Array bounds multiply Gemini's grammar size. haulResult enforces the limit on output.
       items: object({
         name: str,
         quantity: str,
@@ -51,7 +57,7 @@ const schemas = {
   date: object({ date_type: labelType, raw_text: str }),
 };
 const prompts = {
-  haul: "Identify distinct UK groceries. Give a short name, quantity, ISO date YYYY-MM-DD, label type or null. Mark read only if all parts of the date, including the year, are clearly printed. Otherwise estimate from typical storage life, set the label type to null, and mark estimated. Return an empty list for an unrelated photo.",
+  haul: `Identify distinct UK groceries. Return at most ${maxHaulItems} items. Give a short name, quantity, ISO date YYYY-MM-DD, label type or null. Mark read only if all parts of the date, including the year, are clearly printed. Otherwise estimate from typical storage life, set the label type to null, and mark estimated. Return an empty list for an unrelated photo.`,
   date: "Transcribe only the UK use by or best before date portion of the label. Return raw_text exactly as printed, preserving the day, month and year if present. Return the label type only if printed. Do not fill in missing digits or a missing year. If the day or month is unclear, return an empty raw_text and a null date_type.",
 };
 

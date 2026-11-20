@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { dateSchema, foodDraft } from "./household";
+export const maxHaulItems = 80;
 export const haulResult = z.object({
-  items: z.array(foodDraft.extend({ date_confidence: z.enum(["read", "estimated"]) })).max(80),
+  items: z
+    .array(foodDraft.extend({ date_confidence: z.enum(["read", "estimated"]) }))
+    .max(maxHaulItems),
 });
 export const dateResult = z.object({
   date: dateSchema.nullable(),

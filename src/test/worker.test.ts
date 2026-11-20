@@ -161,24 +161,28 @@ it.each([
   expect(await response.json()).toMatchObject({ raw_text, date });
 });
 
-it("returns a validated haul using structured Gemini output with low thinking", async () => {
+const groceries = {
+  name: "Milk",
+  quantity: "2 pints",
+  date: "2026-11-24",
+  date_type: null,
+  date_confidence: "estimated",
+};
+
+it("returns a validated haul without expanding Gemini's schema for each array position", async () => {
   const { send } = harness();
-  const row = {
-    name: "Milk",
-    quantity: "2 pints",
-    date: "2026-11-24",
-    date_type: null,
-    date_confidence: "estimated",
-  };
-  const google = upstream({ items: [row] });
+  const items = Array.from({ length: 80 }, () => groceries);
+  const google = upstream({ items });
   vi.stubGlobal("fetch", google);
   const response = await send(await issueScanGrant(secret, users.adam));
-  expect(await response.json()).toEqual({ items: [row] });
+  expect(await response.json()).toEqual({ items });
   const options = google.mock.calls[0]![1]!;
-  expect(JSON.parse(options.body as string).generationConfig).toMatchObject({
+  const { generationConfig } = JSON.parse(options.body as string);
+  expect(generationConfig).toMatchObject({
     responseSchema: { required: ["items"] },
     thinkingConfig: { thinkingLevel: "low" },
   });
+  expect(generationConfig).not.toHaveProperty("responseSchema.properties.items.maxItems");
 });
 
 it("distinguishes provider quota, timeout and bad output without logging photos", async () => {
@@ -192,6 +196,7 @@ it("distinguishes provider quota, timeout and bad output without logging photos"
       "provider-timeout",
     ],
     [upstream({ items: [{}] }), 502, "provider-output"],
+    [upstream({ items: Array.from({ length: 81 }, () => groceries) }), 502, "provider-output"],
   ] as const) {
     vi.stubGlobal("fetch", mock);
     const result = await send(await issueScanGrant(secret, users.adam));
