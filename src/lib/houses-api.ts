@@ -11,8 +11,13 @@ const houseRpc = createServerFn({ method: "POST" })
 export async function callHouse<T extends HouseCommand>(
   data: T,
   token: string,
+  signal?: AbortSignal,
 ): Promise<HouseReplies[T["type"]]> {
-  const result = await houseRpc({ data, headers: { Authorization: "Bearer " + token } });
+  const result = await houseRpc({
+    data,
+    headers: { Authorization: "Bearer " + token },
+    ...(signal ? { signal } : {}),
+  });
   if (!result.ok) throw Error(result.message);
   return result.data as HouseReplies[T["type"]];
 }

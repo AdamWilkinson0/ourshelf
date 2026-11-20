@@ -6,7 +6,8 @@ export const haulResult = z.object({
 export const dateResult = z.object({
   date: dateSchema.nullable(),
   date_type: z.enum(["use_by", "best_before"]).nullable(),
-  raw_text: z.string(),
+  raw_text: z.string().max(160),
 });
 export type ScanMode = "haul" | "date";
-export const maxImageBytes = 10 * 1024 * 1024;
+export const maxImageBytes = 3 * 1024 * 1024;
+export const photoSide = { haul: 1600, date: 2400 } as const;

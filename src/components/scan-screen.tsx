@@ -1,25 +1,29 @@
 import { useState } from "react";
 import { Camera, ImagePlus, ListPlus, ScanLine, Trash2, Plus, ShoppingBasket } from "lucide-react";
-import { foodDraft, localDate, sampleHaul, type Draft } from "@/lib/household";
+import { foodDraft, sampleHaul, type Draft } from "@/lib/household";
 import { scan } from "@/lib/scanner";
 import { PhotoInput } from "./kitchen-ui";
 type Row = Draft & { key: string };
 function rows(items: Draft[]): Row[] {
   return items.map((item) => ({ ...item, key: crypto.randomUUID() }));
 }
-const newItem = (): Draft => ({
+const newItem = (today: string): Draft => ({
   name: "",
   quantity: "1 pack",
-  date: localDate(),
+  date: today,
   date_confidence: "manual",
   date_type: null,
 });
 export function ScanScreen({
   onSave,
   saving = false,
+  authorizeScan,
+  today,
 }: {
   onSave: (items: Draft[]) => void;
   saving?: boolean;
+  authorizeScan?: () => Promise<string>;
+  today: string;
 }) {
   const [draft, setDraft] = useState<Row[]>([]);
   const [busy, setBusy] = useState("");
@@ -29,31 +33,42 @@ export function ScanScreen({
     setDraft((old) => old.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
   async function haul(file: File) {
+    if (!authorizeScan) return;
     setNote("");
     setBusy("haul");
     setSample(false);
     try {
-      const result = await scan(file, "haul");
+      const result = await scan(file, "haul", authorizeScan);
       setDraft(rows(result.items));
       if (!result.items.length)
         setNote("No groceries found. Try another photo or add an item manually.");
-    } catch {
-      setNote("Live scan unavailable. Try the sample haul or enter your food manually.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Live scanning is unavailable.";
+      setNote(message + " Try the sample haul or enter your food manually.");
     } finally {
       setBusy("");
     }
   }
   async function closeup(file: File, key: string) {
+    if (!authorizeScan) return;
     setNote("");
     setBusy(key);
     try {
-      const result = await scan(file, "date");
+      const result = await scan(file, "date", authorizeScan);
       if (result.date) {
         change(key, { date: result.date, date_type: result.date_type, date_confidence: "read" });
         setNote("Label read: " + result.raw_text);
+      } else if (result.raw_text.trim()) {
+        change(key, { date: "", date_type: result.date_type, date_confidence: "manual" });
+        setNote(
+          "Found “" +
+            result.raw_text +
+            "”. Check the label and enter the full date, including the year.",
+        );
       } else setNote("Couldn’t read that label. Try a closer photo or enter the printed date.");
-    } catch {
-      setNote("Couldn’t scan that label. Your date is unchanged. Retry or enter the printed date.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Couldn’t scan that label.";
+      setNote(message + " Your date is unchanged.");
     } finally {
       setBusy("");
     }
@@ -64,26 +79,37 @@ export function ScanScreen({
         <ScanLine />
         <h1>Scan shopping</h1>
       </div>
+      {authorizeScan && (
+        <p className="hint">
+          Live scanning sends your photo to Google Gemini to read the groceries or label.
+        </p>
+      )}
       {!draft.length ? (
         <div className="scan-start panel">
           <div className="scan-frame">
             <ShoppingBasket size={64} strokeWidth={1.3} />
           </div>
           <h2>Add your haul</h2>
-          <p>Start with one photo of your shopping. You can check each label before saving.</p>
-          <div className="action-row">
-            <PhotoInput label="Take a photo" camera disabled={!!busy || saving} onFile={haul}>
-              <Camera size={17} />
-            </PhotoInput>
-            <PhotoInput label="Upload photo" disabled={!!busy || saving} onFile={haul}>
-              <ImagePlus size={17} />
-            </PhotoInput>
-          </div>
+          <p>
+            {authorizeScan
+              ? "Start with one photo of your shopping. You can check each label before saving."
+              : "Try the sample haul or enter food manually."}
+          </p>
+          {authorizeScan && (
+            <div className="action-row">
+              <PhotoInput label="Take a photo" camera disabled={!!busy || saving} onFile={haul}>
+                <Camera size={17} />
+              </PhotoInput>
+              <PhotoInput label="Upload photo" disabled={!!busy || saving} onFile={haul}>
+                <ImagePlus size={17} />
+              </PhotoInput>
+            </div>
+          )}
           <div className="scan-alternatives">
             <button
               disabled={!!busy || saving}
               onClick={() => {
-                setDraft(rows(sampleHaul(localDate())));
+                setDraft(rows(sampleHaul(today)));
                 setSample(true);
                 setNote("");
               }}
@@ -93,7 +119,7 @@ export function ScanScreen({
             <button
               disabled={!!busy || saving}
               onClick={() => {
-                setDraft(rows([newItem()]));
+                setDraft(rows([newItem(today)]));
                 setNote("");
                 setSample(false);
               }}
@@ -180,14 +206,16 @@ export function ScanScreen({
                     </select>
                   </label>
                 </div>
-                <PhotoInput
-                  label={busy === r.key ? "Reading label…" : "Snap date"}
-                  camera
-                  disabled={!!busy || saving}
-                  onFile={(f) => closeup(f, r.key)}
-                >
-                  <Camera size={16} />
-                </PhotoInput>
+                {authorizeScan && (
+                  <PhotoInput
+                    label={busy === r.key ? "Reading label…" : "Snap date"}
+                    camera
+                    disabled={!!busy || saving}
+                    onFile={(f) => closeup(f, r.key)}
+                  >
+                    <Camera size={16} />
+                  </PhotoInput>
+                )}
               </fieldset>
             ))}
           </div>
@@ -196,7 +224,7 @@ export function ScanScreen({
               disabled={!!busy || saving}
               type="button"
               className="btn secondary"
-              onClick={() => setDraft((old) => [...old, ...rows([newItem()])])}
+              onClick={() => setDraft((old) => [...old, ...rows([newItem(today)])])}
             >
               <Plus size={16} />
               Add item

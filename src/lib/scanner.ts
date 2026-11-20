@@ -1,5 +1,4 @@
-import { dateResult, haulResult, maxImageBytes, type ScanMode } from "./scan-contract";
-import { localDate } from "./household";
+import { dateResult, haulResult, maxImageBytes, photoSide, type ScanMode } from "./scan-contract";
 import { z } from "zod";
 
 async function encodePhoto(file: File, mode: ScanMode): Promise<string> {
@@ -7,16 +6,17 @@ async function encodePhoto(file: File, mode: ScanMode): Promise<string> {
   try {
     const img = new Image();
     img.src = url;
-    await img.decode();
-    const scale =
-      mode === "haul" ? Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)) : 1;
+    await img.decode().catch(() => {
+      throw new Error("Couldn’t open that photo. Try a JPEG or take another picture.");
+    });
+    const scale = Math.min(1, photoSide[mode] / Math.max(img.naturalWidth, img.naturalHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
     const ctx = canvas.getContext("2d");
     if (!ctx) throw Error("Camera image unavailable.");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const encoded = canvas.toDataURL("image/jpeg", mode === "haul" ? 0.86 : 0.93).split(",")[1];
+    const encoded = canvas.toDataURL("image/jpeg", mode === "haul" ? 0.86 : 0.9).split(",")[1];
     if (!encoded || encoded.length > Math.ceil(maxImageBytes / 3) * 4)
       throw Error("Photo is too large.");
     return encoded;
@@ -24,19 +24,38 @@ async function encodePhoto(file: File, mode: ScanMode): Promise<string> {
     URL.revokeObjectURL(url);
   }
 }
-export function scan(file: File, mode: "haul"): Promise<z.infer<typeof haulResult>>;
-export function scan(file: File, mode: "date"): Promise<z.infer<typeof dateResult>>;
-export async function scan(file: File, mode: ScanMode) {
-  const url = import.meta.env["VITE_SCAN_API_URL"];
-  if (!url) throw Error("Live scan is not connected.");
-  const signal = AbortSignal.timeout(8000);
+type AuthorizeScan = () => Promise<string>;
+
+export function scan(
+  file: File,
+  mode: "haul",
+  authorize: AuthorizeScan,
+): Promise<z.infer<typeof haulResult>>;
+export function scan(
+  file: File,
+  mode: "date",
+  authorize: AuthorizeScan,
+): Promise<z.infer<typeof dateResult>>;
+export async function scan(file: File, mode: ScanMode, authorize: AuthorizeScan) {
+  const scanUrl = import.meta.env["VITE_SCAN_API_URL"];
+  if (!scanUrl) throw Error("Live scan is not connected.");
   const image = await encodePhoto(file, mode);
-  const result = await fetch(url, {
+  const grant = await authorize();
+  const signal = AbortSignal.timeout(25_000);
+  const result = await fetch(scanUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image, mimeType: "image/jpeg", mode, today: localDate() }),
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + grant },
+    body: JSON.stringify({ image, mimeType: "image/jpeg", mode }),
     signal,
+  }).catch(() => {
+    throw new Error(
+      signal.aborted ? "The upload or scan timed out." : "Couldn’t reach the scanner.",
+    );
   });
-  if (!result.ok) throw Error("Scan unavailable.");
+  if (!result.ok) {
+    const body: unknown = await result.json().catch(() => null);
+    const error = z.object({ error: z.string() }).safeParse(body);
+    throw new Error(error.success ? error.data.error : "Live scanning is unavailable.");
+  }
   return (mode === "haul" ? haulResult : dateResult).parse(await result.json());
 }

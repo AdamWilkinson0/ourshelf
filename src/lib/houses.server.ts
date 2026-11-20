@@ -1,12 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 import { getRequestHeader } from "@tanstack/react-start/server";
-import { houseSchema, update, type House } from "./household";
+import { houseDate, houseSchema, update, type House } from "./household";
 import {
   visibleKitchen,
   type HouseCommand,
   type HouseReply,
   type HouseSummary,
 } from "./shared-houses";
+
+import { issueScanGrant, scanSecret } from "./scan-grant";
 
 class HouseError extends Error {}
 
@@ -157,12 +159,19 @@ async function dispatch(db: Backend, user: string, command: HouseCommand): Promi
       );
       return token ? { token, expiresAt } : null;
     }
+    case "scanGrant": {
+      if (!(await membership(db, user, command.id)))
+        throw new HouseError("You don’t belong to this house.");
+      const secret = scanSecret.safeParse(process.env["SCAN_GRANT_SECRET"]);
+      if (!secret.success) throw new HouseError("Live scanning is unavailable.");
+      return { grant: await issueScanGrant(secret.data, user) };
+    }
     case "read":
     case "act": {
       if (!(await membership(db, user, command.id)))
         throw new HouseError("You don’t belong to this house.");
       const now = new Date();
-      const today = now.toISOString().slice(0, 10);
+      const today = houseDate(now);
       for (let attempt = 0; attempt < 3; attempt++) {
         const current = await readKitchen(db, command.id, user);
         if (command.type === "read")
