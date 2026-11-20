@@ -19,15 +19,7 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong. Try again.";
 }
 
-function AccountPanel({
-  children,
-  title,
-  banner = false,
-}: {
-  children: React.ReactNode;
-  title: string;
-  banner?: boolean;
-}) {
+function AccountPanel({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <>
       <header className="site-head">
@@ -37,14 +29,6 @@ function AccountPanel({
       </header>
       <main className="app-main">
         <section className="narrow">
-          {banner && (
-            <div className="art-banner">
-              <img
-                src="/images/kitchen-sky-wide.webp"
-                alt="Hand-drawn kitchen in the sky: an open fridge, a milk-carton rocket and a grocery bag floating in pastel clouds"
-              />
-            </div>
-          )}
           <div className="page-title">
             <UserRound />
             <h1>{title}</h1>
@@ -85,48 +69,146 @@ function SignIn({
       setBusy(false);
     }
   }
+  const title = pending ? "Join a house" : "Your shared kitchen";
   return (
-    <AccountPanel title={pending ? "Join a house" : "Your shared kitchen"} banner>
-      <div className="panel review-card stack">
-        {sharedHousesConfigured ? (
-          <>
-            <p>
-              {pending
-                ? "Sign in with an email link to accept your invitation."
-                : "Sign in to create a house or open an invitation from a housemate."}
-            </p>
-            <form className="account-form stack" onSubmit={(event) => void submit(event)}>
-              <label>
-                Email address
-                <input
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </label>
-              <button className="btn primary" disabled={busy}>
-                <Mail size={17} />
-                {busy ? "Sending…" : "Email me a sign-in link"}
+    <>
+      <header className="site-head">
+        <div className="topbar">
+          <Brand />
+          <nav className="landing-nav" aria-label="Shelf Life">
+            <a href="#how-it-works">How it works</a>
+            <button className="btn secondary" onClick={startDemo}>
+              Try demo
+            </button>
+          </nav>
+        </div>
+      </header>
+      <main className="app-main landing">
+        <section className="landing-hero">
+          <div className="narrow landing-inner">
+            <div className="art-banner landing-banner">
+              <img
+                src="/images/kitchen-sky-wide.webp"
+                alt="Hand-drawn kitchen in the sky: an open fridge, a milk-carton rocket and a grocery bag floating in pastel clouds"
+              />
+            </div>
+            <div className="landing-intro">
+              <span className="mini-title">
+                <span className="live-dot" />
+                {pending ? "You’re invited" : "For uni houses"}
+              </span>
+              <h1>
+                {pending ? "Your house is" : "Share the fridge,"}
+                <br />
+                <em>{pending ? "waiting for you." : "not the mess."}</em>
+              </h1>
+              <p>
+                Shelf Life tracks what’s on everyone’s shelf, flags food before it goes off, and
+                turns sharing and chores into house points.
+              </p>
+            </div>
+            <div className="page-title landing-title">
+              <UserRound />
+              <h1>{title}</h1>
+            </div>
+            <div className="panel review-card stack landing-card">
+              {sharedHousesConfigured ? (
+                <>
+                  <p>
+                    {pending
+                      ? "Sign in with an email link to accept your invitation."
+                      : "Sign in to create a house or open an invitation from a housemate."}
+                  </p>
+                  <form className="account-form stack" onSubmit={(event) => void submit(event)}>
+                    <label>
+                      Email address
+                      <input
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                      />
+                    </label>
+                    <button className="btn primary" disabled={busy}>
+                      <Mail size={17} />
+                      {busy ? "Sending…" : "Email me a sign-in link"}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <p>Shared houses are awaiting setup. You can still explore Clifton House.</p>
+              )}
+              {(notice || authError) && (
+                <p className="notice" role="status">
+                  {notice || authError}
+                </p>
+              )}
+              <button className="btn secondary" onClick={startDemo}>
+                Try demo
               </button>
-            </form>
-          </>
-        ) : (
-          <p>Shared houses are awaiting setup. You can still explore Clifton House.</p>
-        )}
-        {(notice || authError) && (
-          <p className="notice" role="status">
-            {notice || authError}
-          </p>
-        )}
-        <button className="btn secondary" onClick={startDemo}>
-          Try demo
-        </button>
-      </div>
-    </AccountPanel>
+            </div>
+          </div>
+        </section>
+        <section className="landing-features" id="how-it-works">
+          <div className="landing-inner">
+            <span className="mini-title">
+              <span className="live-dot" />
+              How it works
+            </span>
+            <h2>
+              One kitchen, <em>every housemate.</em>
+            </h2>
+            <div className="feature-grid">
+              {FEATURES.map((f) => (
+                <article className="panel feature-card" key={f.title}>
+                  <div className={"feature-art " + f.tint}>
+                    <img src={f.img} alt="" width={400} height={280} loading="lazy" />
+                  </div>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </article>
+              ))}
+            </div>
+            <div className="landing-cta">
+              <button className="btn primary" onClick={startDemo}>
+                Explore the demo house
+              </button>
+              <p>Clifton House, with Adam, Maya and Leo. Nothing to sign up for.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </>
   );
 }
+
+const FEATURES = [
+  {
+    img: "/images/spot-fridge.webp",
+    tint: "mint",
+    title: "Know what’s on your shelf",
+    text: "Every item gets a best-before badge, so the spinach gets eaten before it turns.",
+  },
+  {
+    img: "/images/spot-grabs.webp",
+    tint: "lavender",
+    title: "Put food up for grabs",
+    text: "Offer what you won’t finish. A housemate claims it and you earn house points.",
+  },
+  {
+    img: "/images/spot-scan.webp",
+    tint: "apricot",
+    title: "Scan your shopping",
+    text: "Snap a photo of your haul and Shelf Life reads the labels for you.",
+  },
+  {
+    img: "/images/spot-points.webp",
+    tint: "yellow",
+    title: "Chores count too",
+    text: "Log the bins and the washing up, then climb the house leaderboard.",
+  },
+];
 
 export function HouseholdHome({
   tab,
