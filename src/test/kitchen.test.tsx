@@ -1,47 +1,49 @@
-import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Kitchen } from "@/components/kitchen";
 import { ScanScreen } from "@/components/scan-screen";
-import { houseSchema, seed } from "@/lib/household";
+import { houseFixture } from "./household-fixtures";
 import { scan } from "@/lib/scanner";
 
 vi.mock("@/lib/scanner", () => ({ scan: vi.fn() }));
 
 afterEach(() => {
   cleanup();
-  localStorage.clear();
-  Reflect.deleteProperty(navigator, "locks");
   vi.clearAllMocks();
 });
 
-it("keeps concurrent demo writes from different profiles without relying on storage events", async () => {
-  let tail = Promise.resolve();
-  const request = vi.fn((_key: string, write: () => void) => {
-    const operation = tail.then(write);
-    tail = operation.catch(() => {});
-    return operation;
-  });
-  Object.defineProperty(navigator, "locks", { value: { request }, configurable: true });
-  const key = "shelf-life.house.v1";
-  const base = seed();
-  localStorage.setItem(key, JSON.stringify({ ...base, active: "adam" }));
-  const first = within(render(<Kitchen tab="scan" go={vi.fn()} />).container);
-  localStorage.setItem(key, JSON.stringify({ ...base, active: "leo" }));
-  const second = within(render(<Kitchen tab="scan" go={vi.fn()} />).container);
-  for (const [tab, food] of [
-    [first, "Bread"],
-    [second, "Apples"],
-  ] as const) {
-    fireEvent.click(tab.getByRole("button", { name: "Enter manually" }));
-    fireEvent.change(tab.getByLabelText("Food name"), { target: { value: food } });
-    fireEvent.click(tab.getByRole("button", { name: "Save to My Food" }));
-  }
-  await waitFor(() => {
-    const saved = houseSchema.parse(JSON.parse(localStorage.getItem(key)!));
-    expect(saved.food.slice(-2).map(({ name, owner }) => [name, owner])).toEqual([
-      ["Bread", "adam"],
-      ["Apples", "leo"],
-    ]);
+it("saves manually entered food to the signed-in house", async () => {
+  const today = "2026-11-20";
+  const act = vi.fn().mockResolvedValue(undefined);
+  const go = vi.fn();
+  const screen = render(
+    <Kitchen
+      tab="scan"
+      go={go}
+      shared={{
+        state: { house: { ...houseFixture(today), active: "adam" }, today, revision: 0 },
+        name: "Oak House",
+        profile: null,
+        act,
+        authorizeScan: vi.fn(),
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Enter manually" }));
+  fireEvent.change(screen.getByLabelText("Food name"), { target: { value: "Bread" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save to My Food" }));
+  await waitFor(() => expect(go).toHaveBeenCalledWith("food"));
+  expect(act).toHaveBeenCalledWith({
+    type: "add",
+    rows: [
+      {
+        name: "Bread",
+        quantity: "1 pack",
+        date: today,
+        date_confidence: "manual",
+        date_type: null,
+      },
+    ],
   });
 });
 

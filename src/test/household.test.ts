@@ -5,18 +5,17 @@ import {
   daysLeft,
   foodDraft,
   houseSchema,
-  sampleHaul,
-  seed,
   update,
   type Action,
   type House,
 } from "../lib/household";
+import { haulFixture, houseFixture } from "./household-fixtures";
 const now = new Date(2026, 10, 20, 12);
 const today = "2026-11-20";
 const act = (h: House, a: Action, date = now) => update(h, a, date);
-const as = (h: House, id: string) => act(h, { type: "switch", id });
+const as = (h: House, id: string): House => ({ ...h, active: id });
 function setup(id = "adam") {
-  return as(seed(today), id);
+  return as(houseFixture(today), id);
 }
 function request(h: House, id: string) {
   return act(h, { type: "request", id });
@@ -26,7 +25,7 @@ function accept(h: House, index = 0, date = now) {
 }
 describe("household", () => {
   it("handles inclusive calendar-day windows, past dates and used food", () => {
-    const f = seed(today).food[0]!;
+    const f = houseFixture(today).food[0]!;
     for (const [date, price] of [
       ["2026-11-19", null],
       [today, 0],
@@ -87,15 +86,14 @@ describe("household", () => {
         "closed",
       );
   });
-  it("earns chore points, persists, and resets relative to the demonstration date", () => {
+  it("earns chore points and preserves them through serialization", () => {
     const h = act(setup(), { type: "chore", name: "Take out the bins" });
     expect(balance(h, "adam")).toBe(35);
     expect(houseSchema.parse(JSON.parse(JSON.stringify(h)))).toEqual(h);
-    expect(act(h, { type: "reset" }, new Date(2027, 0, 1, 12))).toEqual(seed("2027-01-01"));
   });
   it("adds a reviewed haul atomically and validates calendar dates", () => {
     const h = setup();
-    const rows = sampleHaul(today);
+    const rows = haulFixture(today);
     expect(act(h, { type: "add", rows }).food).toHaveLength(h.food.length + 3);
     for (const date of ["0", "2026-02-31", ""])
       expect(foodDraft.safeParse({ ...rows[0], date }).success).toBe(false);

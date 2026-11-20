@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Camera, ImagePlus, ListPlus, ScanLine, Trash2, Plus, ShoppingBasket } from "lucide-react";
-import { foodDraft, sampleHaul, type Draft } from "@/lib/household";
+import { foodDraft, type Draft } from "@/lib/household";
 import { scan } from "@/lib/scanner";
 import { PhotoInput } from "./kitchen-ui";
 type Row = Draft & { key: string };
@@ -28,7 +28,6 @@ export function ScanScreen({
   const [draft, setDraft] = useState<Row[]>([]);
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState("");
-  const [sample, setSample] = useState(false);
   function change(key: string, patch: Partial<Draft>) {
     setDraft((old) => old.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
@@ -36,7 +35,6 @@ export function ScanScreen({
     if (!authorizeScan) return;
     setNote("");
     setBusy("haul");
-    setSample(false);
     try {
       const result = await scan(file, "haul", authorizeScan);
       setDraft(rows(result.items));
@@ -44,7 +42,7 @@ export function ScanScreen({
         setNote("No groceries found. Try another photo or add an item manually.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Live scanning is unavailable.";
-      setNote(message + " Try the sample haul or enter your food manually.");
+      setNote(message + " You can enter your food manually.");
     } finally {
       setBusy("");
     }
@@ -93,7 +91,7 @@ export function ScanScreen({
           <p>
             {authorizeScan
               ? "Start with one photo of your shopping. You can check each label before saving."
-              : "Try the sample haul or enter food manually."}
+              : "Live scanning is unavailable. You can enter food manually."}
           </p>
           {authorizeScan && (
             <div className="action-row">
@@ -109,19 +107,8 @@ export function ScanScreen({
             <button
               disabled={!!busy || saving}
               onClick={() => {
-                setDraft(rows(sampleHaul(today)));
-                setSample(true);
-                setNote("");
-              }}
-            >
-              Try sample haul
-            </button>
-            <button
-              disabled={!!busy || saving}
-              onClick={() => {
                 setDraft(rows([newItem(today)]));
                 setNote("");
-                setSample(false);
               }}
             >
               <ListPlus size={17} /> Enter manually
@@ -138,7 +125,7 @@ export function ScanScreen({
           }}
         >
           <div className="section-title">
-            <h2>{sample ? "Review sample haul" : "Review your haul"}</h2>
+            <h2>Review your haul</h2>
             <span>{draft.length} items</span>
           </div>
           <div className="stack">

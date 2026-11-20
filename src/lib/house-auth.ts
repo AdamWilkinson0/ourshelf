@@ -7,7 +7,7 @@ const key =
 export const sharedHousesConfigured = Boolean(url && key);
 let client: ReturnType<typeof createClient> | undefined;
 export function houseAuth() {
-  if (!url || !key) throw Error("Shared houses are unavailable. Try the Clifton House demo.");
+  if (!url || !key) throw Error("Shared houses are unavailable. Try again shortly.");
   return (client ??= createClient(url, key, { auth: { flowType: "pkce" } }));
 }
 

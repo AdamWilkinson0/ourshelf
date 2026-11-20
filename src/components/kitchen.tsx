@@ -11,7 +11,6 @@ import {
   ListChecks,
   MoreHorizontal,
   UserRound,
-  UsersRound,
   X,
 } from "lucide-react";
 import {
@@ -19,14 +18,9 @@ import {
   balance,
   chores,
   daysLeft,
-  houseSchema,
-  localDate,
-  seed,
   shifted,
-  update,
   type Action,
   type Food,
-  type House,
 } from "@/lib/household";
 import { Avatar, Brand, Empty, FoodArt, Modal } from "./kitchen-ui";
 import { SharingScreen } from "./sharing-screen";
@@ -35,54 +29,7 @@ import { ScanScreen } from "./scan-screen";
 import { sharedAction, type SharedKitchen } from "@/lib/shared-houses";
 import type { z } from "zod";
 import { nav, type Tab } from "@/lib/navigation";
-const key = "shelf-life.house.v1";
-function loadHouse() {
-  const raw = localStorage.getItem(key);
-  return raw ? houseSchema.parse(JSON.parse(raw)) : seed();
-}
 import { label, shortDate, timing } from "@/lib/food-label";
-function ProfileList({ h, select }: { h: House; select: (id: string) => void }) {
-  return (
-    <div className="profile-list">
-      {h.members.map((m) => (
-        <button key={m.id} className="profile-choice" onClick={() => select(m.id)}>
-          <Avatar member={m} />
-          <strong>{m.name}</strong>
-          <span className="member-balance">{balance(h, m.id)} pts</span>
-          <ChevronRight size={18} />
-        </button>
-      ))}
-    </div>
-  );
-}
-function Welcome({ h, select }: { h: House; select: (id: string) => void }) {
-  return (
-    <main className="welcome">
-      <div className="welcome-img">
-        <picture>
-          <source media="(max-width: 760px)" srcSet="/images/kitchen-sky-wide.webp" />
-          <img
-            src="/images/kitchen-sky.webp"
-            alt="Hand-drawn kitchen in the sky: an open fridge full of food floating in clouds, a milk-carton rocket and a grocery bag on a parachute"
-          />
-        </picture>
-      </div>
-      <section className="welcome-body">
-        <div className="mini-title">
-          <span className="live-dot" />
-          Shared kitchen
-        </div>
-        <h1>
-          Who’s in the
-          <br />
-          <em>kitchen?</em>
-        </h1>
-        <p>Choose your profile to open your shelf.</p>
-        <ProfileList h={h} select={select} />
-      </section>
-    </main>
-  );
-}
 function FoodRow({
   food,
   today,
@@ -213,62 +160,24 @@ export function Kitchen({
   tab,
   go,
   shared,
-  leaveDemo,
 }: {
   tab: Tab;
   go: (v: Tab) => void;
-  shared?: {
+  shared: {
     state: SharedKitchen;
     name: string;
     profile: ReactNode;
     act: (action: z.infer<typeof sharedAction>) => Promise<void>;
     authorizeScan: () => Promise<string>;
   };
-  leaveDemo?: () => void;
 }) {
-  const [demoHouse, setHouse] = useState<House | null>(null);
-  const latest = useRef<House | null>(null);
-  const sessionOnly = useRef(false);
-  const [demoToday, setToday] = useState("");
-  const h = shared?.state.house ?? demoHouse;
-  const today = shared?.state.today ?? demoToday;
-  const houseName = shared?.name ?? "Your house";
-  const isShared = Boolean(shared);
+  const { house: h, today } = shared.state;
   const writing = useRef(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [modal, setModal] = useState<"chores" | "switch" | "reset" | null>(null);
+  const [choreOpen, setChoreOpen] = useState(false);
   const [editing, setEditing] = useState<Food | null>(null);
   const [filter, setFilter] = useState("All food");
-  useEffect(() => {
-    if (isShared) return;
-    function refresh(preserveProfile = false) {
-      try {
-        const saved = loadHouse();
-        latest.current = preserveProfile
-          ? { ...saved, active: latest.current?.active ?? null }
-          : saved;
-      } catch {
-        latest.current = seed();
-        setMsg("Saved kitchen unavailable. Using demo data.");
-      }
-      setHouse(latest.current);
-      setToday(localDate());
-    }
-    const sync = (e: StorageEvent) => {
-      if (!sessionOnly.current && (e.key === key || e.key === null)) refresh(true);
-    };
-    refresh();
-    window.addEventListener("storage", sync);
-    const tick = () => setToday(localDate());
-    const interval = setInterval(tick, 30000);
-    window.addEventListener("focus", tick);
-    return () => {
-      window.removeEventListener("storage", sync);
-      clearInterval(interval);
-      window.removeEventListener("focus", tick);
-    };
-  }, [isShared]);
   useEffect(() => {
     if (!msg) return;
     const t = setTimeout(() => setMsg(""), 5500);
@@ -279,42 +188,9 @@ export function Kitchen({
     writing.current = true;
     setSaving(true);
     try {
-      if (shared) {
-        await shared.act(sharedAction.parse(a));
-        setMsg(notice);
-        return true;
-      }
-      const apply = (persistent: boolean) => {
-        const current = latest.current;
-        if (!current) return false;
-        let base = current;
-        if (persistent) {
-          try {
-            base = { ...loadHouse(), active: current.active };
-          } catch {
-            // Continue from this tab's last usable state.
-          }
-        }
-        const next = update(base, a);
-        if (persistent) {
-          try {
-            localStorage.setItem(key, JSON.stringify(next));
-          } catch {
-            sessionOnly.current = true;
-          }
-        }
-        latest.current = next;
-        setHouse(next);
-        setToday(localDate());
-        setMsg(
-          persistent && !sessionOnly.current ? notice : "Changes are saved for this tab only.",
-        );
-        return true;
-      };
-      if (navigator.locks && !sessionOnly.current)
-        return await navigator.locks.request(key, () => apply(!sessionOnly.current));
-      sessionOnly.current = true;
-      return apply(false);
+      await shared.act(sharedAction.parse(a));
+      setMsg(notice);
+      return true;
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Couldn’t save the change.");
       return false;
@@ -324,18 +200,12 @@ export function Kitchen({
     }
   }
   function navigate(v: Tab) {
-    setModal(null);
+    setChoreOpen(false);
     setEditing(null);
     go(v);
     window.scrollTo(0, 0);
   }
-  async function choose(id: string) {
-    if (await run({ type: "switch", id }, "")) {
-      setFilter("All food");
-      navigate("food");
-    }
-  }
-  const me = h?.members.find((m) => m.id === h.active);
+  const me = h.members.find((m) => m.id === h.active);
   const toast = msg && (
     <div className="toast" role="status">
       {msg}
@@ -353,28 +223,13 @@ export function Kitchen({
       </header>
     );
   }
-  if (!h)
-    return (
-      <>
-        {header()}
-        <main className="loading" role="status">
-          Opening the kitchen…
-        </main>
-      </>
-    );
   if (!me)
     return (
       <>
         {header()}
-        <Welcome h={h} select={choose} />
-        {leaveDemo && (
-          <div className="narrow demo-exit">
-            <button className="btn secondary" onClick={leaveDemo}>
-              Back to shared houses
-            </button>
-          </div>
-        )}
-        {toast}
+        <main className="loading" role="alert">
+          Your house membership is unavailable.
+        </main>
       </>
     );
   const mine = h.food
@@ -391,7 +246,7 @@ export function Kitchen({
       : filter === "Use soon"
         ? soon
         : mine.filter((f) => askingPrice(f, today) !== null);
-  const openChores = () => setModal("chores");
+  const openChores = () => setChoreOpen(true);
   return (
     <>
       {header()}
@@ -500,7 +355,7 @@ export function Kitchen({
           <ScanScreen
             saving={saving}
             today={today}
-            {...(shared && import.meta.env["VITE_SCAN_API_URL"]
+            {...(import.meta.env["VITE_SCAN_API_URL"]
               ? { authorizeScan: shared.authorizeScan }
               : {})}
             onSave={async (rows) => {
@@ -524,34 +379,10 @@ export function Kitchen({
               <Avatar member={me} />
               <h2>{me.name}</h2>
               <p>
-                {houseName} · {balance(h, me.id)} points
+                {shared.name} · {balance(h, me.id)} points
               </p>
-              {!shared && (
-                <button className="btn primary" onClick={() => setModal("switch")}>
-                  <UsersRound size={18} />
-                  Switch housemate
-                </button>
-              )}
             </div>
-            {shared ? (
-              shared.profile
-            ) : (
-              <section className="section-gap">
-                <h2>Household demo</h2>
-                <p>
-                  Food and points are saved in this browser. Reset to restore the three original
-                  shelves.
-                </p>
-                <button className="btn secondary" onClick={() => setModal("reset")}>
-                  Reset demo data
-                </button>
-                {leaveDemo && (
-                  <button className="btn secondary house-create" onClick={leaveDemo}>
-                    Back to shared houses
-                  </button>
-                )}
-              </section>
-            )}
+            {shared.profile}
           </section>
         )}
       </main>
@@ -581,20 +412,11 @@ export function Kitchen({
           saving={saving}
         />
       )}
-      {modal === "switch" && (
-        <Modal
-          title="Who’s in the kitchen?"
-          description="Choose a housemate to open their shelf."
-          close={() => setModal(null)}
-        >
-          <ProfileList h={h} select={choose} />
-        </Modal>
-      )}
-      {modal === "chores" && (
+      {choreOpen && (
         <Modal
           title="Log a chore"
           description={"What did you finish, " + me.name + "?"}
-          close={() => setModal(null)}
+          close={() => setChoreOpen(false)}
         >
           <div className="profile-list">
             {chores.map((c) => (
@@ -609,7 +431,7 @@ export function Kitchen({
                       "Chore logged. +" + c.points + " points.",
                     )
                   )
-                    setModal(null);
+                    setChoreOpen(false);
                 }}
               >
                 <ListChecks size={19} />
@@ -618,26 +440,6 @@ export function Kitchen({
               </button>
             ))}
           </div>
-        </Modal>
-      )}
-      {modal === "reset" && (
-        <Modal
-          title="Reset this kitchen?"
-          description="This clears food changes, requests and chore history for all three profiles on this browser."
-          close={() => setModal(null)}
-        >
-          <button
-            className="btn primary"
-            onClick={() => {
-              run({ type: "reset" }, "Demo restored.");
-              navigate("food");
-            }}
-          >
-            Reset demo data
-          </button>
-          <button className="btn secondary" onClick={() => setModal(null)}>
-            Keep my kitchen
-          </button>
         </Modal>
       )}
       {toast}

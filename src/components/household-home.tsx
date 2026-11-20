@@ -40,15 +40,7 @@ function AccountPanel({ children, title }: { children: React.ReactNode; title: s
   );
 }
 
-function SignIn({
-  pending,
-  startDemo,
-  authError,
-}: {
-  pending: boolean;
-  startDemo: () => void;
-  authError: string;
-}) {
+function SignIn({ pending, authError }: { pending: boolean; authError: string }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -77,9 +69,9 @@ function SignIn({
           <Brand />
           <nav className="landing-nav" aria-label="Shelf Life">
             <a href="#how-it-works">How it works</a>
-            <button className="btn secondary" onClick={startDemo}>
-              Try demo
-            </button>
+            <a className="btn secondary" href="#sign-in">
+              Sign in
+            </a>
           </nav>
         </div>
       </header>
@@ -111,7 +103,7 @@ function SignIn({
               <UserRound />
               <h1>{title}</h1>
             </div>
-            <div className="panel review-card stack landing-card">
+            <div className="panel review-card stack landing-card" id="sign-in">
               {sharedHousesConfigured ? (
                 <>
                   <p>
@@ -137,16 +129,13 @@ function SignIn({
                   </form>
                 </>
               ) : (
-                <p>Shared houses are awaiting setup. You can still explore Clifton House.</p>
+                <p>Shared houses are awaiting setup.</p>
               )}
               {(notice || authError) && (
                 <p className="notice" role="status">
                   {notice || authError}
                 </p>
               )}
-              <button className="btn secondary" onClick={startDemo}>
-                Try demo
-              </button>
             </div>
           </div>
         </section>
@@ -171,10 +160,9 @@ function SignIn({
               ))}
             </div>
             <div className="landing-cta">
-              <button className="btn primary" onClick={startDemo}>
-                Explore the demo house
-              </button>
-              <p>Clifton House, with Adam, Maya and Leo. Nothing to sign up for.</p>
+              <a className="btn primary" href="#sign-in">
+                Sign in
+              </a>
             </div>
           </div>
         </section>
@@ -210,17 +198,7 @@ const FEATURES = [
   },
 ];
 
-export function HouseholdHome({
-  tab,
-  go,
-  demo,
-  setDemo,
-}: {
-  tab: Tab;
-  go: (tab: Tab) => void;
-  demo: boolean;
-  setDemo: (demo: boolean) => void;
-}) {
+export function HouseholdHome({ tab, go }: { tab: Tab; go: (tab: Tab) => void }) {
   const [identity, setIdentity] = useState<Session | null | undefined>(undefined);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -266,25 +244,13 @@ export function HouseholdHome({
     clearPendingInvite();
     setPending(null);
   }
-  if (demo && !pending) return <Kitchen tab={tab} go={go} leaveDemo={() => setDemo(false)} />;
   if (identity === undefined)
     return (
       <AccountPanel title="Shelf Life">
         <p role="status">Opening your kitchen…</p>
       </AccountPanel>
     );
-  if (!identity) {
-    return (
-      <SignIn
-        pending={Boolean(pending)}
-        authError={error}
-        startDemo={() => {
-          if (pending) dismissInvite();
-          setDemo(true);
-        }}
-      />
-    );
-  }
+  if (!identity) return <SignIn pending={Boolean(pending)} authError={error} />;
   return (
     <SharedHome
       key={identity.user.id}
@@ -293,7 +259,6 @@ export function HouseholdHome({
       dismissInvite={dismissInvite}
       go={go}
       tab={tab}
-      startDemo={() => setDemo(true)}
     />
   );
 }
@@ -304,14 +269,12 @@ function SharedHome({
   dismissInvite,
   tab,
   go,
-  startDemo,
 }: {
   session: Session;
   pending: string | null;
   dismissInvite: () => void;
   tab: Tab;
   go: (tab: Tab) => void;
-  startDemo: () => void;
 }) {
   const token = session.access_token;
   const queryClient = useQueryClient();
@@ -381,9 +344,6 @@ function SharedHome({
     <div className="action-row section-gap">
       <button className="btn secondary" disabled={busy} onClick={() => void signOut()}>
         Sign out
-      </button>
-      <button className="btn secondary" onClick={startDemo}>
-        Try demo
       </button>
       {notice && (
         <p className="notice" role="status">

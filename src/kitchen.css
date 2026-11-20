@@ -170,41 +170,10 @@ small {
   height: 1.8px;
   box-shadow: 0 9.9px var(--forest);
 }
-.welcome,
 .app-main {
   max-width: 1264px;
   margin: 0 auto;
   padding: 36px 48px 124px;
-}
-.welcome {
-  display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  align-items: stretch;
-  gap: clamp(26px, 5vw, 72px);
-  padding-top: clamp(36px, 6vh, 78px);
-}
-.welcome-img {
-  position: relative;
-  min-height: min(62vh, 625px);
-  border: 1px solid var(--ink);
-  border-radius: 28px;
-  overflow: hidden;
-  background: var(--mint);
-  box-shadow: 6px 6px 0 var(--ink);
-}
-.welcome-img img {
-  position: absolute;
-  inset: 14px;
-  width: calc(100% - 28px);
-  height: calc(100% - 28px);
-  object-fit: cover;
-  border: 1px solid var(--ink);
-  border-radius: 17px;
-}
-.welcome-body {
-  align-self: center;
-  max-width: 460px;
-  padding: 30px 0;
 }
 .mini-title {
   gap: 8px;
@@ -218,18 +187,6 @@ small {
   height: 7px;
   border-radius: 50%;
   background: #75499b;
-}
-.welcome h1 {
-  font-size: clamp(60px, 6vw, 88px);
-  line-height: 0.98;
-  margin: 20px 0;
-}
-.welcome h1 em {
-  color: #67428a;
-}
-.welcome-body > p {
-  margin-bottom: 25px;
-  font-size: 16px;
 }
 .profile-list,
 .stack {
@@ -1070,39 +1027,8 @@ select {
   .brand {
     font-size: 28px;
   }
-  .welcome,
   .app-main {
     padding: 20px 18px 104px;
-  }
-  .welcome {
-    grid-template-columns: 1fr;
-    gap: 18px;
-    max-width: 540px;
-  }
-  .welcome-img {
-    min-height: 0;
-    height: clamp(150px, 26vh, 260px);
-    border-radius: 17px;
-  }
-  .welcome-img img {
-    object-position: 50% 56%;
-  }
-  .welcome-body {
-    max-width: none;
-    padding: 6px 2px;
-  }
-  .welcome h1 {
-    font-size: 48px;
-    margin: 10px 0;
-  }
-  .welcome h1 br {
-    display: none;
-  }
-  .welcome h1 em:before {
-    content: " ";
-  }
-  .welcome-body > p {
-    margin-bottom: 16px;
   }
   .profile-choice {
     padding: 9px 12px;
@@ -1216,9 +1142,6 @@ select {
   }
 }
 @media (max-width: 390px) {
-  .welcome h1 {
-    font-size: 42px;
-  }
   .mini-title {
     font-size: 10px;
   }
@@ -1279,10 +1202,6 @@ select {
 }
 .house-create {
   margin-top: 1rem;
-}
-.demo-exit {
-  margin: 0 auto 4rem;
-  padding: 0 1rem;
 }
 .account-form label {
   display: grid;
