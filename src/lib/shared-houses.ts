@@ -23,6 +23,7 @@ export const houseCommand = z.discriminatedUnion("type", [
   z.object({ type: z.literal("name"), name: displayName }),
   z.object({ type: z.literal("create"), name: houseName }),
   z.object({ type: z.literal("read"), id: houseId }),
+  z.object({ type: z.literal("scanGrant"), id: houseId }),
   z.object({ type: z.literal("act"), id: houseId, action: sharedAction }),
   z.object({ type: z.literal("invite"), id: houseId }),
   z.object({ type: z.literal("revoke"), id: houseId }),
@@ -42,6 +43,7 @@ export type HouseReplies = {
   name: { name: string };
   create: { id: string };
   read: SharedKitchen;
+  scanGrant: { grant: string };
   act: SharedKitchen;
   invite: { token: string; expiresAt: string };
   revoke: null;

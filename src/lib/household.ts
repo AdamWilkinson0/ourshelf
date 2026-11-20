@@ -7,6 +7,15 @@ export function localDate(at = new Date()) {
     String(at.getDate()).padStart(2, "0"),
   ].join("-");
 }
+const houseCalendar = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/London",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+export function houseDate(at = new Date()) {
+  return houseCalendar.format(at);
+}
 export function shifted(date: string, days: number) {
   const d = new Date(date + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + days);

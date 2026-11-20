@@ -455,6 +455,14 @@ function SharedHome({
         state: kitchen.data,
         name: active.name,
         profile: myHouses,
+        authorizeScan: async () => {
+          const { grant } = await callHouse(
+            { type: "scanGrant", id: active.id },
+            token,
+            AbortSignal.timeout(8000),
+          );
+          return grant;
+        },
         act: async (action) => {
           const next = await callHouse({ type: "act", id: active.id, action }, token);
           await queryClient.cancelQueries({ queryKey: kitchenKey });

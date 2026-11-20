@@ -219,11 +219,13 @@ export function Kitchen({
     name: string;
     profile: ReactNode;
     act: (action: z.infer<typeof sharedAction>) => Promise<void>;
+    authorizeScan: () => Promise<string>;
   };
   leaveDemo?: () => void;
 }) {
   const [demoHouse, setHouse] = useState<House | null>(null);
   const latest = useRef<House | null>(null);
+  const sessionOnly = useRef(false);
   const [demoToday, setToday] = useState("");
   const h = shared?.state.house ?? demoHouse;
   const today = shared?.state.today ?? demoToday;
@@ -237,9 +239,12 @@ export function Kitchen({
   const [filter, setFilter] = useState("All food");
   useEffect(() => {
     if (isShared) return;
-    function refresh() {
+    function refresh(preserveProfile = false) {
       try {
-        latest.current = loadHouse();
+        const saved = loadHouse();
+        latest.current = preserveProfile
+          ? { ...saved, active: latest.current?.active ?? null }
+          : saved;
       } catch {
         latest.current = seed();
         setMsg("Saved kitchen unavailable. Using demo data.");
@@ -248,7 +253,7 @@ export function Kitchen({
       setToday(localDate());
     }
     const sync = (e: StorageEvent) => {
-      if (e.key === key) refresh();
+      if (!sessionOnly.current && (e.key === key || e.key === null)) refresh(true);
     };
     refresh();
     window.addEventListener("storage", sync);
@@ -267,39 +272,52 @@ export function Kitchen({
     return () => clearTimeout(t);
   }, [msg]);
   async function run(a: Action, notice: string) {
-    if (shared) {
-      if (writing.current) return false;
-      writing.current = true;
-      setSaving(true);
-      try {
+    if (writing.current) return false;
+    writing.current = true;
+    setSaving(true);
+    try {
+      if (shared) {
         await shared.act(sharedAction.parse(a));
         setMsg(notice);
         return true;
-      } catch (error) {
-        setMsg(error instanceof Error ? error.message : "Couldn’t save the change.");
-        return false;
-      } finally {
-        setSaving(false);
-        writing.current = false;
       }
-    }
-    if (!latest.current) return false;
-    try {
-      const next = update(latest.current, a);
-      let saved = true;
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        saved = false;
-      }
-      latest.current = next;
-      setHouse(next);
-      setToday(localDate());
-      setMsg(saved ? notice : "Stored for this session only. Browser storage is unavailable.");
-      return true;
+      const apply = (persistent: boolean) => {
+        const current = latest.current;
+        if (!current) return false;
+        let base = current;
+        if (persistent) {
+          try {
+            base = { ...loadHouse(), active: current.active };
+          } catch {
+            // Continue from this tab's last usable state.
+          }
+        }
+        const next = update(base, a);
+        if (persistent) {
+          try {
+            localStorage.setItem(key, JSON.stringify(next));
+          } catch {
+            sessionOnly.current = true;
+          }
+        }
+        latest.current = next;
+        setHouse(next);
+        setToday(localDate());
+        setMsg(
+          persistent && !sessionOnly.current ? notice : "Changes are saved for this tab only.",
+        );
+        return true;
+      };
+      if (navigator.locks && !sessionOnly.current)
+        return await navigator.locks.request(key, () => apply(!sessionOnly.current));
+      sessionOnly.current = true;
+      return apply(false);
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Something went wrong.");
+      setMsg(e instanceof Error ? e.message : "Couldn’t save the change.");
       return false;
+    } finally {
+      setSaving(false);
+      writing.current = false;
     }
   }
   function navigate(v: Tab) {
@@ -501,6 +519,10 @@ export function Kitchen({
         {tab === "scan" && (
           <ScanScreen
             saving={saving}
+            today={today}
+            {...(shared && import.meta.env["VITE_SCAN_API_URL"]
+              ? { authorizeScan: shared.authorizeScan }
+              : {})}
             onSave={async (rows) => {
               if (await run({ type: "add", rows }, rows.length + " items saved to your shelf.")) {
                 setFilter("All food");
