@@ -114,6 +114,7 @@ export function CameraScan({
         total.current++;
         queued.current.push({ id: total.current, image });
         setCaptured(total.current);
+        navigator.vibrate?.(25);
         if (queued.current.length >= maxBatchPhotos)
           submit(queued.current.splice(0, maxBatchPhotos));
         if (total.current === maxCaptures) pauseCamera();
