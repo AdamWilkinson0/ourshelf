@@ -736,6 +736,19 @@ small {
   font-weight: 700;
   color: var(--muted-ink);
 }
+.rank-row {
+  width: 100%;
+  text-align: left;
+}
+.rank-row:hover {
+  background: var(--mint);
+}
+.rank-row:focus-visible {
+  outline-offset: -3px;
+}
+.rank-row > svg {
+  flex: none;
+}
 .rank-row b {
   margin-left: auto;
 }
@@ -821,7 +834,8 @@ small {
   margin-bottom: 14px;
 }
 .form-grid label,
-.sheet label {
+.sheet label,
+.chore-form label {
   display: grid;
   gap: 6px;
   font-weight: 650;
@@ -868,6 +882,55 @@ select {
 }
 .sheet .btn {
   width: 100%;
+}
+.sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 25px;
+}
+.sheet-heading .btn,
+.chore-option .btn {
+  width: auto;
+  flex-shrink: 0;
+}
+.chore-option > svg {
+  flex-shrink: 0;
+}
+.chore-option > strong,
+.chore-option > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+div.chore-option {
+  justify-content: space-between;
+}
+.chore-option small {
+  display: block;
+}
+.chore-screen .page-title {
+  margin-top: 12px;
+}
+.chore-form {
+  gap: 16px;
+}
+.chore-history {
+  margin-top: 14px;
+}
+.chore-log > div {
+  flex: 1;
+  min-width: 0;
+}
+.chore-log-confirmation {
+  padding: 0 18px 15px;
+}
+.btn.danger {
+  background: #f9e1d9;
+  color: #793628;
+}
+.btn.danger:hover {
+  background: #f5bfae;
 }
 .toast {
   z-index: 80;

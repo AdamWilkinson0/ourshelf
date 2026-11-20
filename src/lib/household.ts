@@ -74,6 +74,13 @@ const entrySchema = z.object({
   label: z.string(),
   kind: z.enum(["food", "chore"]),
 });
+export const choreDetails = z.object({
+  name: z.string().trim().min(1).max(60),
+  points: z.number().int().nonnegative().max(1000000),
+});
+export const choreId = z.string().min(1).max(80);
+const choreTemplate = choreDetails.extend({ id: choreId });
+export type ChoreTemplate = z.infer<typeof choreTemplate>;
 export const houseSchema = z.object({
   version: z.literal(1),
   active: z.string().nullable(),
@@ -81,15 +88,19 @@ export const houseSchema = z.object({
   food: z.array(itemSchema),
   requests: z.array(requestSchema),
   ledger: z.array(entrySchema),
+  choreTemplates: z.array(choreTemplate).optional(),
 });
 export type House = z.infer<typeof houseSchema>;
-export const chores = [
-  { name: "Take out the bins", points: 10 },
-  { name: "Wash the dishes", points: 5 },
-  { name: "Wipe the surfaces", points: 5 },
-  { name: "Hoover the house", points: 15 },
-  { name: "Clean the bathroom", points: 20 },
+const defaultChores: readonly ChoreTemplate[] = [
+  { id: "bins", name: "Take out the bins", points: 10 },
+  { id: "dishes", name: "Wash the dishes", points: 5 },
+  { id: "surfaces", name: "Wipe the surfaces", points: 5 },
+  { id: "hoover", name: "Hoover the house", points: 15 },
+  { id: "bathroom", name: "Clean the bathroom", points: 20 },
 ];
+export function choresFor(house: House) {
+  return house.choreTemplates ?? defaultChores;
+}
 export function balance(h: House, id: string, opening = true, since = "") {
   return (
     (opening ? (h.members.find((m) => m.id === id)?.opening ?? 0) : 0) +
@@ -106,7 +117,11 @@ export type Action =
   | { type: "edit"; id: string; status: Food["status"]; price: number }
   | { type: "request"; id: string }
   | { type: "respond"; id: string; accept: boolean }
-  | { type: "chore"; name: string };
+  | { type: "chore"; name: string }
+  | { type: "logChore"; id: string }
+  | ({ type: "saveChore"; id?: string | undefined } & z.infer<typeof choreDetails>)
+  | { type: "deleteChore"; id: string }
+  | { type: "removeChoreLog"; id: string };
 export function update(
   state: House,
   action: Action,
@@ -124,9 +139,11 @@ export function update(
       if (!parsed.success) throw Error("Give every item a name, quantity and valid date.");
       h.food.push({ ...parsed.data, id: uid(), owner: me, status: "shareable", price: 0 });
     }
-  } else if (action.type === "chore") {
-    const chore = chores.find((c) => c.name === action.name);
-    if (!chore) throw Error("Choose a chore.");
+  } else if (action.type === "chore" || action.type === "logChore") {
+    const chore = choresFor(h).find((c) =>
+      action.type === "logChore" ? c.id === action.id : c.name === action.name,
+    );
+    if (!chore) throw Error("Choose a chore from the current list.");
     h.ledger.push({
       id: uid(),
       time: now.toISOString(),
@@ -136,6 +153,28 @@ export function update(
       label: chore.name,
       kind: "chore",
     });
+  } else if (action.type === "saveChore") {
+    const result = choreDetails.safeParse(action);
+    if (!result.success) throw Error("Enter a chore name and a whole, non-negative point value.");
+    const list = choresFor(h);
+    const index = action.id === undefined ? -1 : list.findIndex((c) => c.id === action.id);
+    if (action.id !== undefined && index === -1)
+      throw Error("This chore is no longer on the list.");
+    const name = result.data.name.toLowerCase();
+    if (list.some((c) => c.id !== action.id && c.name.toLowerCase() === name))
+      throw Error("A chore with that name is already on the list.");
+    const updated = { ...result.data, id: action.id ?? uid() };
+    h.choreTemplates = [...list];
+    if (index === -1) h.choreTemplates.push(updated);
+    else h.choreTemplates[index] = updated;
+  } else if (action.type === "deleteChore") {
+    h.choreTemplates = choresFor(h).filter((c) => c.id !== action.id);
+  } else if (action.type === "removeChoreLog") {
+    const index = h.ledger.findIndex(
+      (e) => e.id === action.id && e.kind === "chore" && e.to === me,
+    );
+    if (index === -1) throw Error("You can only delete your own logged chores.");
+    h.ledger.splice(index, 1);
   } else if (action.type === "edit") {
     const f = h.food.find((f) => f.id === action.id && f.owner === me && f.status !== "used");
     if (!f || !points.safeParse(action.price).success)

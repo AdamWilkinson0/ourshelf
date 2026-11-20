@@ -66,7 +66,12 @@ async function readKitchen(db: Backend, id: string, user: string) {
   return { house, revision: Number(state.revision) };
 }
 function kitchenColumns(house: House) {
-  return { food: house.food, requests: house.requests, ledger: house.ledger };
+  return {
+    food: house.food,
+    requests: house.requests,
+    ledger: house.ledger,
+    choreTemplates: house.choreTemplates,
+  };
 }
 async function dispatch(db: Backend, user: string, command: HouseCommand): Promise<HouseReply> {
   switch (command.type) {

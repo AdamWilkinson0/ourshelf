@@ -53,11 +53,13 @@ export function Modal({
   title,
   description,
   close,
+  titleAction,
   children,
 }: {
   title: string;
   description: string;
   close: () => void;
+  titleAction?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -68,7 +70,10 @@ export function Modal({
       }}
     >
       <DialogContent className="sheet">
-        <DialogTitle>{title}</DialogTitle>
+        <div className="sheet-heading">
+          <DialogTitle>{title}</DialogTitle>
+          {titleAction}
+        </div>
         <DialogDescription>{description}</DialogDescription>
         {children}
       </DialogContent>

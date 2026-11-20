@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   askingPrice,
   balance,
+  choresFor,
   daysLeft,
   foodDraft,
   houseSchema,
@@ -87,6 +88,34 @@ describe("household", () => {
     const h = act(setup(), { type: "chore", name: "Take out the bins" });
     expect(balance(h, "adam")).toBe(35);
     expect(houseSchema.parse(JSON.parse(JSON.stringify(h)))).toEqual(h);
+  });
+  it("saves a household chore list and keeps the original name and points in past logs", () => {
+    let h = act(setup(), { type: "logChore", id: "bins" });
+    h = act(h, { type: "saveChore", id: "bins", name: "Put out the recycling", points: 12 });
+    h = act(h, { type: "saveChore", name: "Water the plants", points: 3 });
+    const added = choresFor(h).find((chore) => chore.name === "Water the plants")!;
+    h = act(as(h, "maya"), { type: "logChore", id: added.id });
+    h = act(h, { type: "deleteChore", id: added.id });
+    h = houseSchema.parse(JSON.parse(JSON.stringify(h)));
+    expect(choresFor(h).find((chore) => chore.id === "bins")).toMatchObject({
+      name: "Put out the recycling",
+      points: 12,
+    });
+    expect(() => act(h, { type: "logChore", id: added.id })).toThrow();
+    expect(h.ledger.map(({ label, amount }) => [label, amount])).toEqual([
+      ["Take out the bins", 10],
+      ["Water the plants", 3],
+    ]);
+    expect(balance(h, "maya")).toBe(33);
+  });
+  it("allows only the owner of a chore log to remove it and reverses its points", () => {
+    const h = act(setup(), { type: "logChore", id: "bins" });
+    const action = { type: "removeChoreLog", id: h.ledger[0]!.id } as const;
+    expect(() => act(as(h, "maya"), action)).toThrow("your own logged chores");
+    const next = act(h, action);
+    expect(next.ledger).toHaveLength(0);
+    expect(balance(next, "adam")).toBe(25);
+    expect(balance(h, "adam")).toBe(35);
   });
   it("adds a reviewed haul atomically and validates calendar dates", () => {
     const h = setup();

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Kitchen } from "@/components/kitchen";
@@ -129,4 +129,62 @@ it("discloses the photo transfer and requires the full date before saving a year
   expect(save).toHaveBeenCalledWith([
     expect.objectContaining({ date: "2026-11-19", date_confidence: "manual" }),
   ]);
+});
+
+it("manages the chore list and limits history deletion to the active housemate", async () => {
+  const today = "2026-11-20";
+  const now = new Date(today);
+  const base = update(
+    { ...houseFixture(today), active: "maya" },
+    { type: "logChore", id: "dishes" },
+    now,
+    today,
+  );
+
+  function SignedInChores() {
+    const [house, setHouse] = useState<House>({ ...base, active: "adam" });
+    return (
+      <Kitchen
+        tab="board"
+        go={vi.fn()}
+        shared={{
+          state: { house, today, revision: 0 },
+          name: "Oak House",
+          profile: null,
+          act: async (action) => setHouse((current) => update(current, action, now, today)),
+          authorizeScan: vi.fn(),
+        }}
+      />
+    );
+  }
+
+  const screen = render(<SignedInChores />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Log chore" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Take out the bins" }));
+  fireEvent.change(screen.getByLabelText("Chore name"), { target: { value: "Put out recycling" } });
+  fireEvent.change(screen.getByLabelText("Points"), { target: { value: "12" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Add a chore" }));
+  fireEvent.change(screen.getByLabelText("Chore name"), { target: { value: "Water the plants" } });
+  fireEvent.change(screen.getByLabelText("Points"), { target: { value: "4" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add chore" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Edit Water the plants" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete chore" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove from list" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Done" }));
+  expect(screen.queryByRole("button", { name: /Water the plants/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Put out recycling.*12 pts/ }));
+
+  fireEvent.click(await screen.findByRole("button", { name: "View Maya’s chore history" }));
+  expect(screen.getByText("Wash the dishes")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Delete/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to leaderboard" }));
+  fireEvent.click(screen.getByRole("button", { name: "View Adam’s chore history" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete logged chore Put out recycling" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete log" }));
+  expect(await screen.findByText("No chores logged yet.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to leaderboard" }));
+  expect(screen.getByRole("heading", { name: "25 pts" })).toBeInTheDocument();
 });

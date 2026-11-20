@@ -8,12 +8,11 @@ import {
   Coins,
   HandHeart,
   Leaf,
-  ListChecks,
   MoreHorizontal,
   UserRound,
   X,
 } from "lucide-react";
-import { askingPrice, balance, chores, daysLeft, type Action, type Food } from "@/lib/household";
+import { askingPrice, balance, daysLeft, type Action, type Food } from "@/lib/household";
 import { Avatar, Brand, Empty, FoodArt, Modal } from "./kitchen-ui";
 import { SharingScreen } from "./sharing-screen";
 import { LeaderboardScreen } from "./leaderboard-screen";
@@ -166,7 +165,6 @@ export function Kitchen({
   const writing = useRef(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [choreOpen, setChoreOpen] = useState(false);
   const [editing, setEditing] = useState<Food | null>(null);
   const [filter, setFilter] = useState("All food");
   useEffect(() => {
@@ -191,7 +189,6 @@ export function Kitchen({
     }
   }
   function navigate(v: Tab) {
-    setChoreOpen(false);
     setEditing(null);
     go(v);
     window.scrollTo(0, 0);
@@ -237,7 +234,6 @@ export function Kitchen({
       : filter === "Use soon"
         ? soon
         : mine.filter((f) => askingPrice(f, today) !== null);
-  const openChores = () => setChoreOpen(true);
   return (
     <>
       {header()}
@@ -358,7 +354,7 @@ export function Kitchen({
           />
         )}
         {tab === "board" && (
-          <LeaderboardScreen h={h} me={me} today={today} openChores={openChores} />
+          <LeaderboardScreen h={h} me={me} today={today} run={run} saving={saving} />
         )}
         {tab === "profile" && (
           <section className="narrow">
@@ -402,36 +398,6 @@ export function Kitchen({
           run={run}
           saving={saving}
         />
-      )}
-      {choreOpen && (
-        <Modal
-          title="Log a chore"
-          description={"What did you finish, " + me.name + "?"}
-          close={() => setChoreOpen(false)}
-        >
-          <div className="profile-list">
-            {chores.map((c) => (
-              <button
-                className="profile-choice"
-                key={c.name}
-                disabled={saving}
-                onClick={async () => {
-                  if (
-                    await run(
-                      { type: "chore", name: c.name },
-                      "Chore logged. +" + c.points + " points.",
-                    )
-                  )
-                    setChoreOpen(false);
-                }}
-              >
-                <ListChecks size={19} />
-                <strong>{c.name}</strong>
-                <span className="member-balance">+{c.points} pts</span>
-              </button>
-            ))}
-          </div>
-        </Modal>
       )}
       {toast}
     </>

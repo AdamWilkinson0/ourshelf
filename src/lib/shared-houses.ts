@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { askingPrice, foodDraft, type House } from "./household";
+import { askingPrice, choreDetails, choreId, foodDraft, type House } from "./household";
 
 export const houseId = z.string().uuid();
 export const displayName = z.string().trim().min(1).max(40);
@@ -16,6 +16,10 @@ export const sharedAction = z.discriminatedUnion("type", [
   z.object({ type: z.literal("request"), id: houseId }),
   z.object({ type: z.literal("respond"), id: houseId, accept: z.boolean() }),
   z.object({ type: z.literal("chore"), name: z.string().max(60) }),
+  z.object({ type: z.literal("logChore"), id: choreId }),
+  choreDetails.extend({ type: z.literal("saveChore"), id: choreId.optional() }),
+  z.object({ type: z.literal("deleteChore"), id: choreId }),
+  z.object({ type: z.literal("removeChoreLog"), id: houseId }),
 ]);
 
 export const houseCommand = z.discriminatedUnion("type", [

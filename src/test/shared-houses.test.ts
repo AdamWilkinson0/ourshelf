@@ -76,5 +76,13 @@ describe("shared house boundaries", () => {
         action: { type: "chore", name: "Take out the bins" },
       }).success,
     ).toBe(true);
+    for (const action of [
+      { type: "logChore", id: "bins" },
+      { type: "saveChore", id: "bins", name: "Recycling", points: 12 },
+      { type: "deleteChore", id: "bins" },
+      { type: "removeChoreLog", id },
+    ]) {
+      expect(houseCommand.safeParse({ type: "act", id, action }).success).toBe(true);
+    }
   });
 });
