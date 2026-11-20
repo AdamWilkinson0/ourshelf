@@ -1,8 +1,11 @@
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Kitchen } from "@/components/kitchen";
 import { ScanScreen } from "@/components/scan-screen";
 import { houseFixture } from "./household-fixtures";
+import { update, type House } from "@/lib/household";
+import type { Tab } from "@/lib/navigation";
 import { scan } from "@/lib/scanner";
 
 vi.mock("@/lib/scanner", () => ({ scan: vi.fn() }));
@@ -45,6 +48,63 @@ it("saves manually entered food to the signed-in house", async () => {
       },
     ],
   });
+});
+
+it("lets the owner change the price of newly saved food and make it private", async () => {
+  const today = "2026-11-20";
+  const now = new Date(today);
+  function SignedInKitchen() {
+    const [tab, setTab] = useState<Tab>("scan");
+    const [house, setHouse] = useState<House>(() => ({
+      ...houseFixture(today),
+      food: [],
+      active: "adam",
+    }));
+    return (
+      <Kitchen
+        tab={tab}
+        go={setTab}
+        shared={{
+          state: { house, today, revision: 0 },
+          name: "Oak House",
+          profile: null,
+          act: async (action) => setHouse((current) => update(current, action, now, today)),
+          authorizeScan: vi.fn(),
+        }}
+      />
+    );
+  }
+
+  const app = render(<SignedInKitchen />);
+  fireEvent.click(app.getByRole("button", { name: "Enter manually" }));
+  fireEvent.change(app.getByLabelText("Food name"), { target: { value: "Bread" } });
+  fireEvent.click(app.getByRole("button", { name: "Save to My Food" }));
+  await app.findByRole("button", { name: "Manage Bread" });
+
+  const manageBread = () => fireEvent.click(app.getByRole("button", { name: "Manage Bread" }));
+  const sharing = () => app.getByRole("combobox", { name: "Sharing" });
+  const price = () => app.getByRole("spinbutton", { name: "Asking price in points" });
+  const save = async () => {
+    fireEvent.click(app.getByRole("button", { name: "Save settings" }));
+    await waitFor(() => expect(app.queryByRole("dialog")).not.toBeInTheDocument());
+  };
+
+  manageBread();
+  expect(sharing()).toHaveValue("shareable");
+  expect(price()).toHaveValue(0);
+  fireEvent.change(price(), { target: { value: "5" } });
+  await save();
+
+  manageBread();
+  expect(price()).toHaveValue(5);
+  fireEvent.change(sharing(), { target: { value: "private" } });
+  expect(app.getByText("Only visible to you.")).toBeInTheDocument();
+  await save();
+
+  fireEvent.click(app.getByRole("button", { name: /^Sharing$/ }));
+  expect(app.queryByRole("button", { name: "Manage Bread" })).not.toBeInTheDocument();
+  fireEvent.click(app.getByRole("button", { name: "All food" }));
+  expect(app.getByRole("button", { name: "Manage Bread" })).toBeInTheDocument();
 });
 
 it("discloses the photo transfer and requires the full date before saving a yearless label", async () => {

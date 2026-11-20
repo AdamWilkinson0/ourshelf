@@ -20,7 +20,14 @@ export function houseFixture(today: string): House {
     { id: "leo", name: "Leo", colour: "lilac", opening: 20 },
   ];
   const food: Food[] = [];
-  function add(id: string, name: string, quantity: string, owner: string, days: number, price = 0) {
+  function add(
+    id: string,
+    name: string,
+    quantity: string,
+    owner: string,
+    days: number,
+    price?: number,
+  ) {
     food.push({
       id,
       name,
@@ -29,16 +36,16 @@ export function houseFixture(today: string): House {
       date: shifted(today, days),
       date_type: name === "Milk" || name === "Greek yoghurt" ? "use_by" : "best_before",
       date_confidence: "read",
-      price,
-      status: price ? "shareable" : "private",
+      price: price ?? 0,
+      status: price === undefined ? "private" : "shareable",
     });
   }
-  add("spinach", "Baby spinach", "1 bag", "adam", 1);
+  add("spinach", "Baby spinach", "1 bag", "adam", 1, 0);
   add("tomatoes", "Cherry tomatoes", "250 g", "adam", 3);
   add("eggs", "Free range eggs", "6 eggs", "adam", 8, 5);
-  add("yoghurt", "Greek yoghurt", "500 g", "maya", 1);
+  add("yoghurt", "Greek yoghurt", "500 g", "maya", 1, 0);
   add("milk", "Milk", "2 pints", "maya", 5, 6);
-  add("lemons", "Lemons", "3 lemons", "leo", 2);
+  add("lemons", "Lemons", "3 lemons", "leo", 2, 0);
   add("pasta", "Fusilli pasta", "500 g", "leo", 60, 4);
   return { version: 1, active: null, members, food, requests: [], ledger: [] };
 }

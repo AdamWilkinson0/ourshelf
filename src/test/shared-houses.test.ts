@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { update, type House } from "@/lib/household";
+import { askingPrice, update, type House } from "@/lib/household";
 import { houseCommand, visibleKitchen } from "@/lib/shared-houses";
 
-import { houseFixture } from "./household-fixtures";
+import { haulFixture, houseFixture } from "./household-fixtures";
 
 describe("shared house boundaries", () => {
   const today = "2026-11-20";
@@ -28,6 +28,40 @@ describe("shared house boundaries", () => {
     expect(visibleKitchen(house, "adam", today).requests).toHaveLength(1);
     expect(visibleKitchen(house, "maya", today).requests).toHaveLength(1);
     expect(visibleKitchen(house, "leo", today).requests).toHaveLength(0);
+  });
+
+  it("shows new food as free to housemates and honours the owner's price and privacy changes", () => {
+    const now = new Date(today);
+    const initial = { ...houseFixture(today), food: [], active: "adam" };
+    const house = update(initial, { type: "add", rows: haulFixture(today) }, now, today);
+    const [yoghurt] = house.food;
+    const id = yoghurt!.id;
+    expect(visibleKitchen(house, "leo", today).food).toEqual(house.food);
+    expect(house.food.every((item) => item.status === "shareable" && item.price === 0)).toBe(true);
+
+    const priced = update(house, { type: "edit", id, status: "shareable", price: 4 }, now, today);
+    const leo = visibleKitchen(priced, "leo", today);
+    expect(
+      askingPrice(
+        leo.food.find((item) => item.id === id)!,
+        today,
+      ),
+    ).toBe(4);
+    const requested = update({ ...priced, active: "leo" }, { type: "request", id }, now, today);
+    expect(requested.requests[0]?.price).toBe(4);
+
+    const hidden = update(
+      { ...requested, active: "adam" },
+      { type: "edit", id, status: "private", price: 0 },
+      now,
+      today,
+    );
+    expect(visibleKitchen(hidden, "adam", today).food.some((item) => item.id === id)).toBe(true);
+    expect(visibleKitchen(hidden, "leo", today).food.some((item) => item.id === id)).toBe(false);
+    expect(visibleKitchen(hidden, "leo", today).requests[0]?.status).toBe("closed");
+    expect(() => update({ ...hidden, active: "leo" }, { type: "request", id }, now, today)).toThrow(
+      "This food is unavailable.",
+    );
   });
 
   it("allows shared actions without permitting client identity switches or resets", () => {

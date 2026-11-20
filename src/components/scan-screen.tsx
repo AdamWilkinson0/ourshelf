@@ -206,6 +206,10 @@ export function ScanScreen({
               </fieldset>
             ))}
           </div>
+          <p className="notice">
+            New food is shared for free by default. You can change its visibility and price from
+            your shelf.
+          </p>
           <div className="action-row form-footer">
             <button
               disabled={!!busy || saving}

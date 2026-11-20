@@ -13,15 +13,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import {
-  askingPrice,
-  balance,
-  chores,
-  daysLeft,
-  shifted,
-  type Action,
-  type Food,
-} from "@/lib/household";
+import { askingPrice, balance, chores, daysLeft, type Action, type Food } from "@/lib/household";
 import { Avatar, Brand, Empty, FoodArt, Modal } from "./kitchen-ui";
 import { SharingScreen } from "./sharing-screen";
 import { LeaderboardScreen } from "./leaderboard-screen";
@@ -70,13 +62,12 @@ function FoodSettings({
 }) {
   const [status, setStatus] = useState(food.status);
   const [price, setPrice] = useState(String(food.price));
-  const freeDay = shifted(food.date, -2);
   const visibility =
-    daysLeft(food.date, today) < 0
-      ? "Past its date. Hidden from the sharing feed."
-      : freeDay <= today
-        ? "In its free-sharing window now."
-        : "Free for the house from " + shortDate(freeDay) + ".";
+    status === "private"
+      ? "Only visible to you."
+      : daysLeft(food.date, today) < 0
+        ? "Past its date. Hidden from Up for Grabs."
+        : "Set the price to 0 to share for free.";
   return (
     <Modal
       title={food.name}
@@ -112,10 +103,10 @@ function FoodSettings({
         }}
       >
         <label>
-          Sharing before the free window
+          Sharing
           <select value={status} onChange={(e) => setStatus(e.target.value as Food["status"])}>
             <option value="private">Private</option>
-            <option value="shareable">Share with housemates</option>
+            <option value="shareable">Up for Grabs</option>
           </select>
         </label>
         {status === "shareable" && (

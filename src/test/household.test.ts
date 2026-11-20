@@ -24,16 +24,13 @@ function accept(h: House, index = 0, date = now) {
   return act(h, { type: "respond", id: h.requests[index]!.id, accept: true }, date);
 }
 describe("household", () => {
-  it("handles inclusive calendar-day windows, past dates and used food", () => {
-    const f = houseFixture(today).food[0]!;
-    for (const [date, price] of [
-      ["2026-11-19", null],
-      [today, 0],
-      ["2026-11-21", 0],
-      ["2026-11-22", 0],
-      ["2026-11-23", null],
-    ] as const)
-      expect(askingPrice({ ...f, date }, today)).toBe(price);
+  it("uses the chosen price up to the item's date and honours a private or used status", () => {
+    const f = { ...houseFixture(today).food[0]!, status: "shareable" as const, price: 6 };
+    expect(askingPrice({ ...f, date: "2026-11-19" }, today)).toBeNull();
+    expect(askingPrice({ ...f, date: today }, today)).toBe(6);
+    expect(askingPrice(f, today)).toBe(6);
+    expect(askingPrice({ ...f, price: 0 }, today)).toBe(0);
+    expect(askingPrice({ ...f, status: "private" }, today)).toBeNull();
     expect(askingPrice({ ...f, status: "used" }, today)).toBeNull();
     expect(daysLeft("2026-03-30", "2026-03-28")).toBe(2);
   });
@@ -61,9 +58,9 @@ describe("household", () => {
     });
     expect(() => accept(h)).toThrow();
   });
-  it("rechecks the expiry window and remaining balance before accepting", () => {
+  it("rechecks the expiry date and remaining balance before accepting", () => {
     const h = as(request(setup(), "milk"), "maya");
-    expect(accept(h, 0, new Date(2026, 10, 23, 12)).ledger[0]?.amount).toBe(0);
+    expect(accept(h, 0, new Date(2026, 10, 23, 12)).ledger[0]?.amount).toBe(6);
     expect(() => accept(h, 0, new Date(2026, 10, 26, 12))).toThrow();
     h.members[0]!.opening = 0;
     expect(() => accept(h)).toThrow();
@@ -79,10 +76,10 @@ describe("household", () => {
     expect(denied.ledger).toHaveLength(0);
     expect(denied.requests[0]?.status).toBe("declined");
   });
-  it("closes pending requests when food is used or made private outside the window", () => {
-    const h = as(request(setup(), "milk"), "maya");
+  it("closes pending requests when food is used or made private, even near expiry", () => {
+    const h = as(request(setup(), "yoghurt"), "maya");
     for (const status of ["private", "used"] as const)
-      expect(act(h, { type: "edit", id: "milk", status, price: 0 }).requests[0]?.status).toBe(
+      expect(act(h, { type: "edit", id: "yoghurt", status, price: 0 }).requests[0]?.status).toBe(
         "closed",
       );
   });
@@ -94,7 +91,11 @@ describe("household", () => {
   it("adds a reviewed haul atomically and validates calendar dates", () => {
     const h = setup();
     const rows = haulFixture(today);
-    expect(act(h, { type: "add", rows }).food).toHaveLength(h.food.length + 3);
+    const added = act(h, { type: "add", rows }).food.slice(h.food.length);
+    expect(added).toHaveLength(3);
+    expect(added.every((item) => item.owner === "adam" && askingPrice(item, today) === 0)).toBe(
+      true,
+    );
     for (const date of ["0", "2026-02-31", ""])
       expect(foodDraft.safeParse({ ...rows[0], date }).success).toBe(false);
     expect(() =>

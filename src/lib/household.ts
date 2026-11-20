@@ -99,9 +99,7 @@ export function balance(h: House, id: string, opening = true, since = "") {
   );
 }
 export function askingPrice(food: Food, today: string): number | null {
-  const days = daysLeft(food.date, today);
-  if (days < 0 || food.status === "used") return null;
-  return days <= 2 ? 0 : food.status === "shareable" ? food.price : null;
+  return food.status === "shareable" && daysLeft(food.date, today) >= 0 ? food.price : null;
 }
 export type Action =
   | { type: "add"; rows: Draft[] }
@@ -124,7 +122,7 @@ export function update(
     for (const row of action.rows) {
       const parsed = foodDraft.safeParse(row);
       if (!parsed.success) throw Error("Give every item a name, quantity and valid date.");
-      h.food.push({ ...parsed.data, id: uid(), owner: me, status: "private", price: 0 });
+      h.food.push({ ...parsed.data, id: uid(), owner: me, status: "shareable", price: 0 });
     }
   } else if (action.type === "chore") {
     const chore = chores.find((c) => c.name === action.name);
