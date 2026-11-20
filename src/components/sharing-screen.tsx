@@ -15,10 +15,11 @@ interface Props {
   today: string;
   available: Food[];
   incoming: FoodRequest[];
-  run: (action: Action, message: string) => boolean;
+  run: (action: Action, message: string) => Promise<boolean>;
+  saving: boolean;
 }
-export function SharingScreen({ h, me, today, available, incoming, run }: Props) {
-  const member = (id: string) => h.members.find((m) => m.id === id)!;
+export function SharingScreen({ h, me, today, available, incoming, run, saving }: Props) {
+  const memberName = (id: string) => h.members.find((m) => m.id === id)?.name ?? "Former housemate";
   const outgoing = h.requests
     .filter((r) => r.buyer === me.id)
     .slice()
@@ -41,7 +42,7 @@ export function SharingScreen({ h, me, today, available, incoming, run }: Props)
                 <div key={r.id} className="request-row">
                   <div>
                     <strong>
-                      {member(r.buyer).name} wants {f.name}
+                      {memberName(r.buyer)} wants {f.name}
                     </strong>
                     <small>
                       {p === null ? "No longer available" : p === 0 ? "Free" : r.price + " pts"}
@@ -50,6 +51,7 @@ export function SharingScreen({ h, me, today, available, incoming, run }: Props)
                   <div className="action-row">
                     <button
                       className="btn secondary"
+                      disabled={saving}
                       onClick={() =>
                         run({ type: "respond", id: r.id, accept: false }, "Request declined.")
                       }
@@ -58,7 +60,7 @@ export function SharingScreen({ h, me, today, available, incoming, run }: Props)
                     </button>
                     <button
                       className="btn primary"
-                      disabled={p === null}
+                      disabled={p === null || saving}
                       onClick={() =>
                         run({ type: "respond", id: r.id, accept: true }, "Food handed over.")
                       }
@@ -91,17 +93,17 @@ export function SharingScreen({ h, me, today, available, incoming, run }: Props)
               </div>
               <h3>{f.name}</h3>
               <p>
-                {f.quantity} · {member(f.owner).name}’s shelf
+                {f.quantity} · {memberName(f.owner)}’s shelf
               </p>
               <div className="grab-bottom">
                 <strong>{price === 0 ? "Free" : price + " pts"}</strong>
                 <button
                   className="btn primary"
-                  disabled={pending}
+                  disabled={pending || saving}
                   onClick={() =>
                     run(
                       { type: "request", id: f.id },
-                      "Request sent to " + member(f.owner).name + ".",
+                      "Request sent to " + memberName(f.owner) + ".",
                     )
                   }
                 >
@@ -120,7 +122,7 @@ export function SharingScreen({ h, me, today, available, incoming, run }: Props)
             {outgoing.map((r) => (
               <div className="activity" key={r.id}>
                 <span>
-                  {foodName(r.itemId)} <small>from {member(r.owner).name}</small>
+                  {foodName(r.itemId)} <small>from {memberName(r.owner)}</small>
                 </span>
                 <span className="tag">{r.status}</span>
               </div>

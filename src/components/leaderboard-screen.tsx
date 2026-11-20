@@ -12,7 +12,7 @@ export function LeaderboardScreen({
   today: string;
   openChores: () => void;
 }) {
-  const member = (id: string) => h.members.find((m) => m.id === id)!;
+  const memberName = (id: string) => h.members.find((m) => m.id === id)?.name ?? "Former housemate";
   const week = new Date(today + "T00:00:00");
   week.setDate(week.getDate() - ((week.getDay() + 6) % 7));
   const weekly = (m: Member) => balance(h, m.id, false, week.toISOString());
@@ -71,8 +71,8 @@ export function LeaderboardScreen({
                     <strong>{e.label}</strong>
                     <small>
                       {e.from
-                        ? member(e.to).name + " shared with " + member(e.from).name
-                        : member(e.to).name + " completed a chore"}
+                        ? memberName(e.to) + " shared with " + memberName(e.from)
+                        : memberName(e.to) + " completed a chore"}
                     </small>
                   </span>
                 </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -32,6 +32,8 @@ import { Avatar, Brand, Empty, FoodArt, HomeLabel, Modal } from "./kitchen-ui";
 import { SharingScreen } from "./sharing-screen";
 import { LeaderboardScreen } from "./leaderboard-screen";
 import { ScanScreen } from "./scan-screen";
+import { sharedAction, type SharedKitchen } from "@/lib/shared-houses";
+import type { z } from "zod";
 import { nav, type Tab } from "@/lib/navigation";
 const key = "shelf-life.house.v1";
 function loadHouse() {
@@ -108,11 +110,13 @@ function FoodSettings({
   today,
   close,
   run,
+  saving,
 }: {
   food: Food;
   today: string;
   close: () => void;
-  run: (a: Action, msg: string) => boolean;
+  run: (a: Action, msg: string) => Promise<boolean>;
+  saving: boolean;
 }) {
   const [status, setStatus] = useState(food.status);
   const [price, setPrice] = useState(String(food.price));
@@ -141,10 +145,10 @@ function FoodSettings({
     >
       <form
         className="stack"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (
-            run(
+            await run(
               {
                 type: "edit",
                 id: food.id,
@@ -181,12 +185,17 @@ function FoodSettings({
           <Leaf size={17} />
           {visibility}
         </p>
-        <button className="btn primary">Save settings</button>
+        <button className="btn primary" disabled={saving}>
+          Save settings
+        </button>
         <button
           type="button"
           className="btn secondary"
-          onClick={() => {
-            if (run({ type: "edit", id: food.id, status: "used", price: 0 }, "Marked as used."))
+          disabled={saving}
+          onClick={async () => {
+            if (
+              await run({ type: "edit", id: food.id, status: "used", price: 0 }, "Marked as used.")
+            )
               close();
           }}
         >
@@ -197,15 +206,37 @@ function FoodSettings({
     </Modal>
   );
 }
-export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
-  const [h, setHouse] = useState<House | null>(null);
+export function Kitchen({
+  tab,
+  go,
+  shared,
+  leaveDemo,
+}: {
+  tab: Tab;
+  go: (v: Tab) => void;
+  shared?: {
+    state: SharedKitchen;
+    name: string;
+    profile: ReactNode;
+    act: (action: z.infer<typeof sharedAction>) => Promise<void>;
+  };
+  leaveDemo?: () => void;
+}) {
+  const [demoHouse, setHouse] = useState<House | null>(null);
   const latest = useRef<House | null>(null);
-  const [today, setToday] = useState("");
+  const [demoToday, setToday] = useState("");
+  const h = shared?.state.house ?? demoHouse;
+  const today = shared?.state.today ?? demoToday;
+  const houseName = shared?.name ?? "Clifton House";
+  const isShared = Boolean(shared);
+  const writing = useRef(false);
+  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [modal, setModal] = useState<"chores" | "switch" | "reset" | null>(null);
   const [editing, setEditing] = useState<Food | null>(null);
   const [filter, setFilter] = useState("All food");
   useEffect(() => {
+    if (isShared) return;
     function refresh() {
       try {
         latest.current = loadHouse();
@@ -229,13 +260,29 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
       clearInterval(interval);
       window.removeEventListener("focus", tick);
     };
-  }, []);
+  }, [isShared]);
   useEffect(() => {
     if (!msg) return;
     const t = setTimeout(() => setMsg(""), 5500);
     return () => clearTimeout(t);
   }, [msg]);
-  function run(a: Action, notice: string) {
+  async function run(a: Action, notice: string) {
+    if (shared) {
+      if (writing.current) return false;
+      writing.current = true;
+      setSaving(true);
+      try {
+        await shared.act(sharedAction.parse(a));
+        setMsg(notice);
+        return true;
+      } catch (error) {
+        setMsg(error instanceof Error ? error.message : "Couldn’t save the change.");
+        return false;
+      } finally {
+        setSaving(false);
+        writing.current = false;
+      }
+    }
     if (!latest.current) return false;
     try {
       const next = update(latest.current, a);
@@ -261,8 +308,8 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
     go(v);
     window.scrollTo(0, 0);
   }
-  function choose(id: string) {
-    if (run({ type: "switch", id }, "")) {
+  async function choose(id: string) {
+    if (await run({ type: "switch", id }, "")) {
       setFilter("All food");
       navigate("food");
     }
@@ -282,12 +329,16 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
         <div className="topbar">
           <Brand />
           <div className="top-right">
-            <HomeLabel />
+            <HomeLabel name={houseName} />
             {me && (
               <button
                 className="switch-chip"
-                aria-label={"Switch profile, current profile " + me.name}
-                onClick={() => setModal("switch")}
+                aria-label={
+                  shared
+                    ? "Open profile for " + me.name
+                    : "Switch profile, current profile " + me.name
+                }
+                onClick={() => (shared ? navigate("profile") : setModal("switch"))}
               >
                 <Avatar member={me} />
                 <span>{me.name}</span>
@@ -312,6 +363,13 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
       <>
         {header()}
         <Welcome h={h} select={choose} />
+        {leaveDemo && (
+          <div className="narrow demo-exit">
+            <button className="btn secondary" onClick={leaveDemo}>
+              Back to shared houses
+            </button>
+          </div>
+        )}
         {toast}
       </>
     );
@@ -437,12 +495,14 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
             available={available}
             incoming={incoming}
             run={run}
+            saving={saving}
           />
         )}
         {tab === "scan" && (
           <ScanScreen
-            onSave={(rows) => {
-              if (run({ type: "add", rows }, rows.length + " items saved to your shelf.")) {
+            saving={saving}
+            onSave={async (rows) => {
+              if (await run({ type: "add", rows }, rows.length + " items saved to your shelf.")) {
                 setFilter("All food");
                 navigate("food");
               }
@@ -461,22 +521,35 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
             <div className="panel profile-card">
               <Avatar member={me} />
               <h2>{me.name}</h2>
-              <p>Clifton House · {balance(h, me.id)} points</p>
-              <button className="btn primary" onClick={() => setModal("switch")}>
-                <UsersRound size={18} />
-                Switch housemate
-              </button>
-            </div>
-            <section className="section-gap">
-              <h2>Household demo</h2>
               <p>
-                Food and points are saved in this browser. Reset to restore the three original
-                shelves.
+                {houseName} · {balance(h, me.id)} points
               </p>
-              <button className="btn secondary" onClick={() => setModal("reset")}>
-                Reset demo data
-              </button>
-            </section>
+              {!shared && (
+                <button className="btn primary" onClick={() => setModal("switch")}>
+                  <UsersRound size={18} />
+                  Switch housemate
+                </button>
+              )}
+            </div>
+            {shared ? (
+              shared.profile
+            ) : (
+              <section className="section-gap">
+                <h2>Household demo</h2>
+                <p>
+                  Food and points are saved in this browser. Reset to restore the three original
+                  shelves.
+                </p>
+                <button className="btn secondary" onClick={() => setModal("reset")}>
+                  Reset demo data
+                </button>
+                {leaveDemo && (
+                  <button className="btn secondary house-create" onClick={leaveDemo}>
+                    Back to shared houses
+                  </button>
+                )}
+              </section>
+            )}
           </section>
         )}
       </main>
@@ -498,7 +571,13 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
         </div>
       </nav>
       {editing && (
-        <FoodSettings food={editing} today={today} close={() => setEditing(null)} run={run} />
+        <FoodSettings
+          food={editing}
+          today={today}
+          close={() => setEditing(null)}
+          run={run}
+          saving={saving}
+        />
       )}
       {modal === "switch" && (
         <Modal
@@ -520,9 +599,13 @@ export function Kitchen({ tab, go }: { tab: Tab; go: (v: Tab) => void }) {
               <button
                 className="profile-choice"
                 key={c.name}
-                onClick={() => {
+                disabled={saving}
+                onClick={async () => {
                   if (
-                    run({ type: "chore", name: c.name }, "Chore logged. +" + c.points + " points.")
+                    await run(
+                      { type: "chore", name: c.name },
+                      "Chore logged. +" + c.points + " points.",
+                    )
                   )
                     setModal(null);
                 }}

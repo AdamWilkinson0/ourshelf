@@ -144,9 +144,13 @@ export type Action =
   | { type: "request"; id: string }
   | { type: "respond"; id: string; accept: boolean }
   | { type: "chore"; name: string };
-export function update(state: House, action: Action, now = new Date()): House {
+export function update(
+  state: House,
+  action: Action,
+  now = new Date(),
+  today = localDate(now),
+): House {
   const h = structuredClone(state);
-  const today = localDate(now);
   const uid = () => crypto.randomUUID();
   if (action.type === "reset") return seed(today);
   if (action.type === "switch") {

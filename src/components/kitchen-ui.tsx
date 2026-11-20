@@ -25,10 +25,10 @@ export function Brand() {
     </span>
   );
 }
-export function HomeLabel() {
+export function HomeLabel({ name }: { name: string }) {
   return (
     <span className="home-label">
-      <HouseIcon size={16} /> Clifton House
+      <HouseIcon size={16} /> <span>{name}</span>
     </span>
   );
 }

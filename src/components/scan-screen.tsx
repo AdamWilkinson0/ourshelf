@@ -14,7 +14,13 @@ const newItem = (): Draft => ({
   date_confidence: "manual",
   date_type: null,
 });
-export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
+export function ScanScreen({
+  onSave,
+  saving = false,
+}: {
+  onSave: (items: Draft[]) => void;
+  saving?: boolean;
+}) {
   const [draft, setDraft] = useState<Row[]>([]);
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState("");
@@ -66,16 +72,16 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
           <h2>Add your haul</h2>
           <p>Start with one photo of your shopping. You can check each label before saving.</p>
           <div className="action-row">
-            <PhotoInput label="Take a photo" camera disabled={!!busy} onFile={haul}>
+            <PhotoInput label="Take a photo" camera disabled={!!busy || saving} onFile={haul}>
               <Camera size={17} />
             </PhotoInput>
-            <PhotoInput label="Upload photo" disabled={!!busy} onFile={haul}>
+            <PhotoInput label="Upload photo" disabled={!!busy || saving} onFile={haul}>
               <ImagePlus size={17} />
             </PhotoInput>
           </div>
           <div className="scan-alternatives">
             <button
-              disabled={!!busy}
+              disabled={!!busy || saving}
               onClick={() => {
                 setDraft(rows(sampleHaul(localDate())));
                 setSample(true);
@@ -85,7 +91,7 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
               Try sample haul
             </button>
             <button
-              disabled={!!busy}
+              disabled={!!busy || saving}
               onClick={() => {
                 setDraft(rows([newItem()]));
                 setNote("");
@@ -100,7 +106,8 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!busy && draft.every((r) => foodDraft.safeParse(r).success)) onSave(draft);
+            if (!busy && !saving && draft.every((r) => foodDraft.safeParse(r).success))
+              onSave(draft);
             else setNote("Check each name, quantity and date.");
           }}
         >
@@ -110,7 +117,7 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
           </div>
           <div className="stack">
             {draft.map((r, i) => (
-              <fieldset key={r.key} disabled={!!busy} className="panel review-card">
+              <fieldset key={r.key} disabled={!!busy || saving} className="panel review-card">
                 <legend className="sr-only">Item {i + 1}</legend>
                 <div className="section-title">
                   <span className="tag">
@@ -176,7 +183,7 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
                 <PhotoInput
                   label={busy === r.key ? "Reading label…" : "Snap date"}
                   camera
-                  disabled={!!busy}
+                  disabled={!!busy || saving}
                   onFile={(f) => closeup(f, r.key)}
                 >
                   <Camera size={16} />
@@ -186,7 +193,7 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
           </div>
           <div className="action-row form-footer">
             <button
-              disabled={!!busy}
+              disabled={!!busy || saving}
               type="button"
               className="btn secondary"
               onClick={() => setDraft((old) => [...old, ...rows([newItem()])])}
@@ -194,7 +201,7 @@ export function ScanScreen({ onSave }: { onSave: (items: Draft[]) => void }) {
               <Plus size={16} />
               Add item
             </button>
-            <button disabled={!!busy} className="btn primary">
+            <button disabled={!!busy || saving} className="btn primary">
               Save to My Food
             </button>
           </div>
