@@ -1295,7 +1295,7 @@ div.chore-option {
 }
 .camera-guide {
   position: absolute;
-  inset: 12%;
+  inset: 6%;
   border: 2px solid var(--mint);
   border-radius: 1rem;
   box-shadow: 0 0 0 100vmax rgb(0 0 0 / 24%);

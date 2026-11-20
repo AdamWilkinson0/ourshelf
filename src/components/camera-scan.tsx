@@ -169,7 +169,7 @@ export function CameraScan({
         if (!active) return;
         setReady(true);
         progress.current.candidate = null;
-        timer = setInterval(() => tryCapture(camera, sample), 125);
+        timer = setInterval(() => tryCapture(camera, sample), 100);
       } catch (error) {
         if (!active) return;
         setCameraError(
@@ -247,7 +247,7 @@ export function CameraScan({
               ? "Opening camera…"
               : captured
                 ? "Captured · next item"
-                : "Centre one item and hold still.");
+                : "Line up one item in the guide.");
   return (
     <div className="panel camera-scan">
       {phase === "capture" && (

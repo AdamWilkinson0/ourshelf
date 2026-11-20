@@ -79,11 +79,6 @@ export function ScanScreen({
         <ScanLine />
         <h1>Scan shopping</h1>
       </div>
-      {authorizeScan && (
-        <p className="hint">
-          Live scanning sends your photo to Google Gemini to read the groceries or label.
-        </p>
-      )}
       {cameraOpen && authorizeScan ? (
         <CameraScan
           authorize={authorizeScan}

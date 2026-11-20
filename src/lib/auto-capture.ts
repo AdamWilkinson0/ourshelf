@@ -1,7 +1,14 @@
 const sampleSide = 32;
-const stableForMs = 700;
-const motionLimit = 7;
-const newViewThreshold = 18;
+const stableForMs = 350;
+const motionLimit = 12;
+const regionSide = 8;
+const regionsPerRow = sampleSide / regionSide;
+
+function regionOf(index: number) {
+  const row = Math.floor(index / sampleSide);
+  const column = index % sampleSide;
+  return Math.floor(row / regionSide) * regionsPerRow + Math.floor(column / regionSide);
+}
 
 // Keep the decision separate from camera I/O so it can be tested with recorded or synthetic frames.
 export interface AutoCapture {
@@ -15,22 +22,35 @@ function difference(first: Uint8Array, second: Uint8Array) {
   return total / first.length;
 }
 
-function hasDetail(pixels: Uint8Array) {
-  let brightness = 0;
-  let detail = 0;
+function newItemInView(previous: Uint8Array, pixels: Uint8Array) {
+  // A smaller item can change substantially while most of the background stays the same.
+  const changes = new Float32Array(regionsPerRow * regionsPerRow);
+  let total = 0;
   for (let i = 0; i < pixels.length; i++) {
-    brightness += pixels[i]!;
-    if (i % sampleSide) detail += Math.abs(pixels[i]! - pixels[i - 1]!);
-    if (i >= sampleSide) detail += Math.abs(pixels[i]! - pixels[i - sampleSide]!);
+    const change = Math.abs(previous[i]! - pixels[i]!);
+    const region = regionOf(i);
+    changes[region] = changes[region]! + change;
+    total += change;
   }
-  return brightness / pixels.length > 25 && detail / pixels.length > 12;
+  return total / pixels.length >= 18 || changes.some((change) => change / regionSide ** 2 >= 34);
+}
+
+function hasDetail(pixels: Uint8Array) {
+  const details = new Float32Array(regionsPerRow * regionsPerRow);
+  let brightness = 0;
+  for (let i = 0; i < pixels.length; i++) {
+    const pixel = pixels[i]!;
+    brightness += pixel;
+    const horizontal = i % sampleSide ? Math.abs(pixel - pixels[i - 1]!) : 0;
+    const vertical = i >= sampleSide ? Math.abs(pixel - pixels[i - sampleSide]!) : 0;
+    const region = regionOf(i);
+    details[region] = details[region]! + horizontal + vertical;
+  }
+  return brightness / pixels.length > 22 && details.some((detail) => detail / regionSide ** 2 > 8);
 }
 
 export function captureDecision(state: AutoCapture, pixels: Uint8Array, now: number) {
-  if (
-    !hasDetail(pixels) ||
-    (state.lastCapture && difference(state.lastCapture, pixels) < newViewThreshold)
-  ) {
+  if (!hasDetail(pixels) || (state.lastCapture && !newItemInView(state.lastCapture, pixels))) {
     state.candidate = null;
     return false;
   }
@@ -45,8 +65,9 @@ export function captureArea(width: number, height: number) {
   // Match the center of the 4:3 preview and the guide within it.
   const previewWidth = Math.min(width, (height * 4) / 3);
   const previewHeight = (previewWidth * 3) / 4;
-  const cropWidth = previewWidth * 0.76;
-  const cropHeight = previewHeight * 0.76;
+  // Keep this crop aligned with the 6% inset of the camera guide.
+  const cropWidth = previewWidth * 0.88;
+  const cropHeight = previewHeight * 0.88;
   return [(width - cropWidth) / 2, (height - cropHeight) / 2, cropWidth, cropHeight] as const;
 }
 

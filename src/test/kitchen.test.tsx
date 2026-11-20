@@ -107,12 +107,11 @@ it("lets the owner change the price of newly saved food and make it private", as
   expect(app.getByRole("button", { name: "Manage Bread" })).toBeInTheDocument();
 });
 
-it("discloses the photo transfer and requires the full date before saving a yearless label", async () => {
+it("requires the full date before saving a yearless label", async () => {
   vi.mocked(scan).mockResolvedValue({ raw_text: "19 NOV", date_type: "use_by", date: null });
   const save = vi.fn();
   const authorize = vi.fn();
   const screen = render(<ScanScreen today="2026-11-20" onSave={save} authorizeScan={authorize} />);
-  expect(screen.getByText(/sends your photo to Google Gemini/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Enter manually" }));
   fireEvent.change(screen.getByLabelText("Food name"), { target: { value: "Milk" } });
   fireEvent.change(screen.getByLabelText("Snap date"), {
