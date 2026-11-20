@@ -59,10 +59,13 @@ function Welcome({ h, select }: { h: House; select: (id: string) => void }) {
   return (
     <main className="welcome">
       <div className="welcome-img">
-        <img
-          src="/images/market-bag.webp"
-          alt="Fresh market vegetables spilling from a paper grocery bag"
-        />
+        <picture>
+          <source media="(max-width: 760px)" srcSet="/images/kitchen-sky-wide.webp" />
+          <img
+            src="/images/kitchen-sky.webp"
+            alt="Hand-drawn kitchen in the sky: an open fridge full of food floating in clouds, a milk-carton rocket and a grocery bag on a parachute"
+          />
+        </picture>
       </div>
       <section className="welcome-body">
         <div className="mini-title">
@@ -410,6 +413,7 @@ export function Kitchen({
                   to use soon
                 </p>
               </div>
+              <img className="hero-art" src="/images/shelf-hero-art.webp" alt="" />
               <button className="btn hero-btn" onClick={() => navigate("scan")}>
                 <Camera size={17} />
                 Scan shopping
@@ -457,7 +461,7 @@ export function Kitchen({
                       </FoodRow>
                     ))
                   ) : (
-                    <Empty>No food here yet.</Empty>
+                    <Empty art>No food here yet.</Empty>
                   )}
                 </div>
               </section>

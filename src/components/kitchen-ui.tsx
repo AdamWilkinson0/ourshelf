@@ -116,6 +116,12 @@ export function PhotoInput({
     </span>
   );
 }
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="empty">{children}</p>;
+export function Empty({ children, art = false }: { children: ReactNode; art?: boolean }) {
+  if (!art) return <p className="empty">{children}</p>;
+  return (
+    <div className="empty empty-with-art">
+      <img src="/images/empty-shelf.webp" alt="" width={200} height={140} />
+      <p>{children}</p>
+    </div>
+  );
 }

@@ -19,7 +19,15 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong. Try again.";
 }
 
-function AccountPanel({ children, title }: { children: React.ReactNode; title: string }) {
+function AccountPanel({
+  children,
+  title,
+  banner = false,
+}: {
+  children: React.ReactNode;
+  title: string;
+  banner?: boolean;
+}) {
   return (
     <>
       <header className="site-head">
@@ -29,6 +37,14 @@ function AccountPanel({ children, title }: { children: React.ReactNode; title: s
       </header>
       <main className="app-main">
         <section className="narrow">
+          {banner && (
+            <div className="art-banner">
+              <img
+                src="/images/kitchen-sky-wide.webp"
+                alt="Hand-drawn kitchen in the sky: an open fridge, a milk-carton rocket and a grocery bag floating in pastel clouds"
+              />
+            </div>
+          )}
           <div className="page-title">
             <UserRound />
             <h1>{title}</h1>
@@ -70,7 +86,7 @@ function SignIn({
     }
   }
   return (
-    <AccountPanel title={pending ? "Join a house" : "Your shared kitchen"}>
+    <AccountPanel title={pending ? "Join a house" : "Your shared kitchen"} banner>
       <div className="panel review-card stack">
         {sharedHousesConfigured ? (
           <>
