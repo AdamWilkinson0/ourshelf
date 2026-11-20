@@ -28,7 +28,7 @@ import {
   type Food,
   type House,
 } from "@/lib/household";
-import { Avatar, Brand, Empty, FoodArt, HomeLabel, Modal } from "./kitchen-ui";
+import { Avatar, Brand, Empty, FoodArt, Modal } from "./kitchen-ui";
 import { SharingScreen } from "./sharing-screen";
 import { LeaderboardScreen } from "./leaderboard-screen";
 import { ScanScreen } from "./scan-screen";
@@ -349,7 +349,6 @@ export function Kitchen({
       <header className="site-head">
         <div className="topbar">
           <Brand />
-          <HomeLabel name="Your house" />
         </div>
       </header>
     );
