@@ -67,7 +67,7 @@ function SignIn({ pending, authError }: { pending: boolean; authError: string })
       <header className="site-head">
         <div className="topbar">
           <Brand />
-          <nav className="landing-nav" aria-label="Shelf Life">
+          <nav className="landing-nav" aria-label="OurShelf">
             <a href="#how-it-works">How it works</a>
             <a className="btn secondary" href="#sign-in">
               Sign in
@@ -95,8 +95,8 @@ function SignIn({ pending, authError }: { pending: boolean; authError: string })
                 <em>{pending ? "waiting for you." : "not the mess."}</em>
               </h1>
               <p>
-                Shelf Life tracks what’s on everyone’s shelf, flags food before it goes off, and
-                turns sharing and chores into house points.
+                OurShelf tracks what’s on everyone’s shelf, flags food before it goes off, and turns
+                sharing and chores into house points.
               </p>
             </div>
             <div className="page-title landing-title">
@@ -188,7 +188,7 @@ const FEATURES = [
     img: "/images/spot-scan.webp",
     tint: "apricot",
     title: "Scan your shopping",
-    text: "Snap a photo of your haul and Shelf Life reads the labels for you.",
+    text: "Snap a photo of your haul and OurShelf reads the labels for you.",
   },
   {
     img: "/images/spot-points.webp",
@@ -246,7 +246,7 @@ export function HouseholdHome({ tab, go }: { tab: Tab; go: (tab: Tab) => void })
   }
   if (identity === undefined)
     return (
-      <AccountPanel title="Shelf Life">
+      <AccountPanel title="OurShelf">
         <p role="status">Opening your kitchen…</p>
       </AccountPanel>
     );

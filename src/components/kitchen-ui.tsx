@@ -1,23 +1,11 @@
 import { useId, type ReactNode } from "react";
-import {
-  Apple,
-  Milk,
-  Carrot,
-  Leaf,
-  Egg,
-  Cherry,
-  Wheat,
-  Citrus,
-  MilkIcon,
-  PackageOpen,
-} from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Member } from "@/lib/household";
 export function Brand() {
   return (
     <span className="brand">
-      <span className="brand-mark" aria-hidden="true" />
-      Shelf Life
+      <img className="brand-mark" src="/sprout.svg" alt="" width={32} height={32} />
+      OurShelf
     </span>
   );
 }
@@ -25,27 +13,6 @@ export function Avatar({ member }: { member: Member }) {
   return (
     <span aria-hidden="true" className={"avatar " + member.colour}>
       {member.name[0]}
-    </span>
-  );
-}
-export function FoodArt({ name }: { name: string }) {
-  const list = [
-    [/yoghurt|cheese/i, MilkIcon, "dairy"],
-    [/milk/i, Milk, "dairy"],
-    [/carrot/i, Carrot, "orange"],
-    [/spinach|cabbage|lettuce/i, Leaf, "green"],
-    [/tomato|berry/i, Cherry, "red"],
-    [/egg/i, Egg, "brown"],
-    [/lemon/i, Citrus, "yellow"],
-    [/lime/i, Citrus, "green"],
-    [/pasta|bread|rice/i, Wheat, "gold"],
-    [/apple/i, Apple, "red"],
-    [/pear/i, Apple, "green"],
-  ] as const;
-  const [, Icon, tone] = list.find(([re]) => re.test(name)) ?? [null, PackageOpen];
-  return (
-    <span aria-hidden="true" className="food-art" data-tone={tone}>
-      <Icon size={26} strokeWidth={1.7} />
     </span>
   );
 }

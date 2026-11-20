@@ -13,7 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { askingPrice, balance, daysLeft, type Action, type Food } from "@/lib/household";
-import { Avatar, Brand, Empty, FoodArt, Modal } from "./kitchen-ui";
+import { Avatar, Brand, Empty, Modal } from "./kitchen-ui";
+import { FoodArt } from "./food-art";
 import { SharingScreen } from "./sharing-screen";
 import { LeaderboardScreen } from "./leaderboard-screen";
 import { ScanScreen } from "./scan-screen";

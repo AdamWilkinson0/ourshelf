@@ -6,9 +6,9 @@ export const Route = createFileRoute("/")({
     tabs.includes(s["view"] as Tab) ? { view: s["view"] as Tab } : {},
   head: () => ({
     meta: [
-      { title: "Shelf Life" },
+      { title: "OurShelf" },
       { name: "description", content: "Your shared kitchen for food, chores and house points." },
-      { property: "og:title", content: "Shelf Life" },
+      { property: "og:title", content: "OurShelf" },
     ],
   }),
   component: Index,

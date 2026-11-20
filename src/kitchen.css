@@ -136,39 +136,7 @@ small {
   color: #111;
 }
 .brand-mark {
-  position: relative;
   flex: none;
-  width: 32.4px;
-  height: 32.4px;
-  border: 1px solid var(--forest);
-  border-radius: 9px;
-  background: var(--lavender);
-  box-shadow: 2.7px 2.7px 0 var(--ink);
-}
-.brand-mark::before,
-.brand-mark::after {
-  content: "";
-  position: absolute;
-  border-radius: 1px;
-  background: var(--forest);
-}
-/* Pantry jars arranged on two shelves. */
-.brand-mark::before {
-  top: 8px;
-  left: 7px;
-  width: 4.5px;
-  height: 5.4px;
-  box-shadow:
-    6.3px -1.8px var(--forest),
-    2.7px 9.9px var(--forest),
-    10.8px 9px var(--forest);
-}
-.brand-mark::after {
-  top: 13.4px;
-  left: 5.2px;
-  width: 19.8px;
-  height: 1.8px;
-  box-shadow: 0 9.9px var(--forest);
 }
 .app-main {
   max-width: 1264px;
@@ -388,32 +356,6 @@ small {
   border-radius: 13px;
   background: #fff;
   color: #111;
-}
-.food-art[data-tone="dairy"] .lucide-milk path:nth-child(2) {
-  fill: #f5ebd5;
-}
-.food-art .lucide-carrot path:first-child {
-  fill: #efa56b;
-}
-.food-art .lucide-carrot path:not(:first-child),
-.food-art .lucide-cherry path:last-child,
-.food-art .lucide-leaf path:first-child,
-.food-art[data-tone="green"] .lucide-apple path:last-child,
-.food-art[data-tone="green"] .lucide-citrus path:first-child {
-  fill: #a6c48c;
-}
-.food-art .lucide-cherry path:nth-child(-n + 2),
-.food-art[data-tone="red"] .lucide-apple path:last-child {
-  fill: #e98f84;
-}
-.food-art .lucide-egg path {
-  fill: #deb497;
-}
-.food-art[data-tone="yellow"] .lucide-citrus path:first-child {
-  fill: #f5d879;
-}
-.food-art .lucide-wheat path:not(:first-child) {
-  fill: #e5c28a;
 }
 .food-info {
   flex: 1;

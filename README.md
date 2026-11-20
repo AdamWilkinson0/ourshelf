@@ -1,6 +1,6 @@
-# Shelf Life
+# OurShelf
 
-Shelf Life is a mobile-first kitchen for sharing food, chores and house points. Sign in by email link to create a house or join one from an invitation.
+OurShelf is a mobile-first kitchen for sharing food, chores and house points. Sign in by email link to create a house or join one from an invitation.
 
 ## Run locally
 

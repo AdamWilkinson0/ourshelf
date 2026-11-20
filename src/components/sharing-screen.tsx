@@ -8,7 +8,8 @@ import {
   type Member,
 } from "@/lib/household";
 import { timing } from "@/lib/food-label";
-import { FoodArt, Empty } from "./kitchen-ui";
+import { Empty } from "./kitchen-ui";
+import { FoodArt } from "./food-art";
 interface Props {
   h: House;
   me: Member;

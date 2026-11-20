@@ -177,7 +177,7 @@ export function MyHouses({ houses, active, select, create, invite, revoke }: Pro
                       void run(async () => {
                         try {
                           await navigator.share({
-                            title: "Join " + inviting.name + " on Shelf Life",
+                            title: "Join " + inviting.name + " on OurShelf",
                             url: link.url,
                           });
                         } catch (error) {
