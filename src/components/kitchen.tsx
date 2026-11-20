@@ -401,13 +401,7 @@ export function Kitchen({
           <>
             <div className="shelf-hero">
               <div className="hero-text">
-                <span className="mini-title">
-                  <span className="live-dot" />
-                  {me.name}’s kitchen
-                </span>
-                <h1>
-                  My <em>food.</em>
-                </h1>
+                <h1>{me.name}’s kitchen</h1>
                 <p>
                   {mine.length} {mine.length === 1 ? "item" : "items"} on your shelf · {soon.length}{" "}
                   to use soon

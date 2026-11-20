@@ -76,7 +76,9 @@ export function SharingScreen({ h, me, today, available, incoming, run, saving }
       )}
       <div className="section-title">
         <h2>From your housemates</h2>
-        <span>{available.length} items</span>
+        <strong className="grab-count">
+          {available.length} {available.length === 1 ? "item" : "items"}
+        </strong>
       </div>
       <div className="grab-grid">
         {available.map((f) => {
