@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera, Check } from "lucide-react";
 import {
   captureArea,
   captureDecision,
@@ -255,6 +255,11 @@ export function CameraScan({
           <video ref={video} muted playsInline aria-label="Live camera preview" />
           {ready && <div className="camera-guide" aria-hidden="true" />}
           {!ready && <Camera className="camera-placeholder" aria-hidden="true" />}
+          {captured > 0 && (
+            <span key={captured} className="camera-confirmation" aria-hidden="true">
+              <Check size={27} strokeWidth={3} />
+            </span>
+          )}
         </div>
       )}
       <div className="camera-info">

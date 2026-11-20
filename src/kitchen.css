@@ -1307,6 +1307,44 @@ div.chore-option {
   color: var(--mint);
   z-index: 1;
 }
+.camera-confirmation {
+  display: none;
+  position: absolute;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .camera-confirmation {
+    display: grid;
+    animation: capture-confirmation 480ms ease-out both;
+  }
+}
+@keyframes capture-confirmation {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  24% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
 .camera-info {
   display: flex;
   flex-wrap: wrap;
