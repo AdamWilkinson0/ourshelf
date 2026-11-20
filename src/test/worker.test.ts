@@ -210,3 +210,48 @@ it("distinguishes provider quota, timeout and bad output without logging photos"
     });
   }
 });
+
+it("reads multiple numbered captures in one quota reservation and preserves their indexes", async () => {
+  const { send } = harness();
+  const items = [
+    { ...groceries, capture: 2 },
+    { ...groceries, capture: 1, name: "Carrots" },
+  ];
+  const google = upstream({ items });
+  vi.stubGlobal("fetch", google);
+  const token = await issueScanGrant(secret, users.adam);
+  const batch = { mode: "batch", mimeType: "image/jpeg", images: [jpeg, jpeg] };
+  const response = await send(token, batch);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ items });
+  expect(google).toHaveBeenCalledTimes(1);
+  const { contents } = JSON.parse(google.mock.calls[0]![1]!.body as string);
+  expect(contents[0].parts.slice(1)).toEqual([
+    { text: "Photo 1" },
+    { inlineData: { mimeType: "image/jpeg", data: jpeg } },
+    { text: "Photo 2" },
+    { inlineData: { mimeType: "image/jpeg", data: jpeg } },
+  ]);
+  const more = await Promise.all(Array.from({ length: 5 }, () => send(token, batch)));
+  expect(more.every(({ status }) => status === 200)).toBe(true);
+  expect((await send(token, batch)).status).toBe(429);
+});
+
+it("rejects invalid batch photos and conflicting or missing capture indexes", async () => {
+  const { send } = harness();
+  const token = await issueScanGrant(secret, users.adam);
+  const batch = { mode: "batch", mimeType: "image/jpeg", images: [jpeg, jpeg] };
+  const google = vi.fn();
+  vi.stubGlobal("fetch", google);
+  expect((await send(token, { ...batch, images: Array(5).fill(jpeg) })).status).toBe(400);
+  expect((await send(token, { ...batch, images: [jpeg, "AAAA"] })).status).toBe(422);
+  expect(google).not.toHaveBeenCalled();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  for (const indexes of [[2, 2], [3], [undefined]]) {
+    vi.stubGlobal(
+      "fetch",
+      upstream({ items: indexes.map((capture) => ({ ...groceries, capture })) }),
+    );
+    expect((await send(token, batch)).status).toBe(502);
+  }
+});

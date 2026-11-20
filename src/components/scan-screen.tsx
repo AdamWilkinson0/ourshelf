@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Camera, ImagePlus, ListPlus, ScanLine, Trash2, Plus, ShoppingBasket } from "lucide-react";
 import { foodDraft, type Draft } from "@/lib/household";
 import { scan } from "@/lib/scanner";
+import { CameraScan } from "./camera-scan";
 import { PhotoInput } from "./kitchen-ui";
 type Row = Draft & { key: string };
 function rows(items: Draft[]): Row[] {
@@ -25,6 +26,7 @@ export function ScanScreen({
   authorizeScan?: () => Promise<string>;
   today: string;
 }) {
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [draft, setDraft] = useState<Row[]>([]);
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState("");
@@ -82,7 +84,24 @@ export function ScanScreen({
           Live scanning sends your photo to Google Gemini to read the groceries or label.
         </p>
       )}
-      {!draft.length ? (
+      {cameraOpen && authorizeScan ? (
+        <CameraScan
+          authorize={authorizeScan}
+          close={() => setCameraOpen(false)}
+          review={(items, missed) => {
+            setDraft(rows(items));
+            setNote(
+              missed
+                ? "Couldn’t read " +
+                    missed +
+                    (missed === 1 ? " capture." : " captures.") +
+                    " You can add the missing food manually."
+                : "",
+            );
+            setCameraOpen(false);
+          }}
+        />
+      ) : !draft.length ? (
         <div className="scan-start panel">
           <div className="scan-frame">
             <ShoppingBasket size={64} strokeWidth={1.3} />
@@ -90,14 +109,21 @@ export function ScanScreen({
           <h2>Add your haul</h2>
           <p>
             {authorizeScan
-              ? "Start with one photo of your shopping. You can check each label before saving."
+              ? "Scan items one at a time, or upload a photo of your shopping."
               : "Live scanning is unavailable. You can enter food manually."}
           </p>
           {authorizeScan && (
             <div className="action-row">
-              <PhotoInput label="Take a photo" camera disabled={!!busy || saving} onFile={haul}>
-                <Camera size={17} />
-              </PhotoInput>
+              <button
+                className="btn primary"
+                disabled={!!busy || saving}
+                onClick={() => {
+                  setNote("");
+                  setCameraOpen(true);
+                }}
+              >
+                <Camera size={17} /> Start scan
+              </button>
               <PhotoInput label="Upload photo" disabled={!!busy || saving} onFile={haul}>
                 <ImagePlus size={17} />
               </PhotoInput>

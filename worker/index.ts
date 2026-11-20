@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { houseDate } from "../src/lib/household";
 import {
+  batchResult,
+  cameraPhotoSide,
   dateResult,
+  maxBatchPhotos,
+  maxCaptureBytes,
   haulResult,
   maxHaulItems,
   maxImageBytes,
@@ -25,14 +29,21 @@ interface Env {
   SCAN_QUOTA?: QuotaBinding;
 }
 
-const payload = z.object({
-  mode: z.enum(["haul", "date"]),
-  mimeType: z.literal("image/jpeg"),
-  image: z
-    .string()
-    .min(4)
-    .max(Math.ceil(maxImageBytes / 3) * 4),
-});
+const jpeg = z.string().min(4);
+const mimeType = z.literal("image/jpeg");
+const singlePhoto = { mimeType, image: jpeg.max(Math.ceil(maxImageBytes / 3) * 4) };
+const payload = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("haul"), ...singlePhoto }),
+  z.object({ mode: z.literal("date"), ...singlePhoto }),
+  z.object({
+    mode: z.literal("batch"),
+    mimeType,
+    images: z
+      .array(jpeg.max(Math.ceil(maxCaptureBytes / 3) * 4))
+      .min(1)
+      .max(maxBatchPhotos),
+  }),
+]);
 const str = { type: "STRING" };
 const labelType = { type: "STRING", enum: ["best_before", "use_by"], nullable: true };
 const object = (properties: Record<string, unknown>) => ({
@@ -40,24 +51,27 @@ const object = (properties: Record<string, unknown>) => ({
   properties,
   required: Object.keys(properties),
 });
+const groceryFields = {
+  name: str,
+  quantity: str,
+  date: str,
+  date_type: labelType,
+  date_confidence: { type: "STRING", enum: ["estimated", "read"] },
+};
 const schemas = {
   haul: object({
-    items: {
-      type: "ARRAY",
-      // Array bounds multiply Gemini's grammar size. haulResult enforces the limit on output.
-      items: object({
-        name: str,
-        quantity: str,
-        date: str,
-        date_type: labelType,
-        date_confidence: { type: "STRING", enum: ["estimated", "read"] },
-      }),
-    },
+    // Array bounds multiply Gemini's grammar size. The response validators enforce the limits.
+    items: { type: "ARRAY", items: object(groceryFields) },
+  }),
+  batch: object({
+    items: { type: "ARRAY", items: object({ capture: { type: "INTEGER" }, ...groceryFields }) },
   }),
   date: object({ date_type: labelType, raw_text: str }),
 };
 const prompts = {
   haul: `Identify distinct UK groceries. Return at most ${maxHaulItems} items. Give a short name, quantity, ISO date YYYY-MM-DD, label type or null. Mark read only if all parts of the date, including the year, are clearly printed. Otherwise estimate from typical storage life, set the label type to null, and mark estimated. Return an empty list for an unrelated photo.`,
+  batch:
+    "Each numbered photo shows one grocery item centered in the frame. Return at most one entry per photo, with capture set to the photo number. Ignore background items and omit photos without a recognizable grocery. Keep separate captures separate. Give a short name, quantity, ISO date YYYY-MM-DD, label type or null. Mark read only if the full date including year is clearly printed. Otherwise estimate from typical UK storage life, set label type to null, and mark estimated.",
   date: "Transcribe only the UK use by or best before date portion of the label. Return raw_text exactly as printed, preserving the day, month and year if present. Return the label type only if printed. Do not fill in missing digits or a missing year. If the day or month is unclear, return an empty raw_text and a null date_type.",
 };
 
@@ -113,8 +127,10 @@ async function scan(req: Request, env: Env, reserve: () => Promise<Response>) {
 
   const input = payload.safeParse(await readJson(req, Math.ceil(maxImageBytes / 3) * 4 + 1024));
   if (!input.success) throw new InputError("Invalid scan input.", 400);
-  const { mode, image, mimeType } = input.data;
-  if (!supportedJpeg(image, photoSide[mode]))
+  const { mode, mimeType } = input.data;
+  const images = input.data.mode === "batch" ? input.data.images : [input.data.image];
+  const maxSide = mode === "batch" ? cameraPhotoSide : photoSide[mode];
+  if (!images.every((image) => supportedJpeg(image, maxSide)))
     throw new InputError("This photo is invalid or unsupported.", 422);
   const rate = await reserve();
   if (rate.status !== 204) {
@@ -144,11 +160,14 @@ async function scan(req: Request, env: Env, reserve: () => Promise<Response>) {
               parts: [
                 {
                   text:
-                    mode === "haul"
-                      ? "Today is " + houseDate() + ". " + prompts.haul
-                      : prompts.date,
+                    mode === "date"
+                      ? prompts.date
+                      : "Today is " + houseDate() + ". " + prompts[mode],
                 },
-                { inlineData: { mimeType, data: image } },
+                ...images.flatMap((data, index) => {
+                  const photo = { inlineData: { mimeType, data } };
+                  return mode === "batch" ? [{ text: "Photo " + (index + 1) }, photo] : [photo];
+                }),
               ],
             },
           ],
@@ -156,7 +175,7 @@ async function scan(req: Request, env: Env, reserve: () => Promise<Response>) {
             responseMimeType: "application/json",
             responseSchema: schemas[mode],
             thinkingConfig: { thinkingLevel: "low" },
-            maxOutputTokens: mode === "haul" ? 8192 : 1024,
+            maxOutputTokens: mode === "haul" ? 8192 : mode === "batch" ? 2048 : 1024,
           },
         }),
       },
@@ -182,6 +201,16 @@ async function scan(req: Request, env: Env, reserve: () => Promise<Response>) {
       .join("");
     const parsed: unknown = JSON.parse(answer ?? "");
     if (mode === "haul") return Response.json(haulResult.parse(parsed));
+    if (mode === "batch") {
+      const batch = batchResult.parse(parsed);
+      const captures = new Set(batch.items.map((item) => item.capture));
+      if (
+        captures.size !== batch.items.length ||
+        batch.items.some((item) => item.capture > images.length)
+      )
+        return fail("provider-output", 502, "The scanner couldn’t match the items to the photos.");
+      return Response.json(batch);
+    }
     const label = labelResponse.parse(parsed);
     return Response.json({ ...label, date: printedDate(label.raw_text) });
   } catch (error) {

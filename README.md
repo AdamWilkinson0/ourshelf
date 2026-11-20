@@ -23,7 +23,7 @@ Open the local URL printed by Vite. Configure the backend and allow the local or
 
 ## Connect live scanning
 
-Live scanning is available to signed-in house members. The TanStack server checks membership and issues a one-minute scan grant. A Cloudflare Durable Object enforces six provider calls per user per minute and 120 across the deployment per UTC day.
+Live scanning is available to signed-in house members. The TanStack server checks membership and issues a one-minute scan grant. A Cloudflare Durable Object enforces six provider calls per user per minute and 120 across the deployment per UTC day. In **Start scan**, the browser captures a steady item in the camera guide and sends up to four captures per provider call. **Upload photo** and manual entry are also available.
 
 Generate a 32-byte base64url `SCAN_GRANT_SECRET` and set the same value in the Lovable server secrets and the Cloudflare Worker secrets. In local development, set it in the app’s `.env.local` and in `worker/.dev.vars`. Also set `GEMINI_API_KEY` in `worker/.dev.vars`. Keep both secrets out of frontend variables and Git.
 
@@ -43,7 +43,7 @@ npx wrangler@4 secret put GEMINI_API_KEY --config worker/wrangler.toml
 npx wrangler@4 secret put SCAN_GRANT_SECRET --config worker/wrangler.toml
 ```
 
-Set the Lovable frontend build variable `VITE_SCAN_API_URL` to the deployed Worker URL including `/scan`, and rebuild. The scanner sends photos to Google Gemini and validates structured model responses. Use manual entry if a haul scan is unavailable. A close-up with a visible date and missing year asks the user to enter the full date before saving.
+Deploy the Worker with batch scanning before publishing the frontend with **Start scan**. Set the Lovable frontend build variable `VITE_SCAN_API_URL` to the deployed Worker URL including `/scan`, and rebuild. The scanner sends photos to Google Gemini and validates structured model responses. Use manual entry if a haul scan is unavailable. A close-up with a visible date and missing year asks the user to enter the full date before saving.
 
 ## Verify
 
