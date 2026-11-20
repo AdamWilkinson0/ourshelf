@@ -49,4 +49,10 @@ bun run lint
 bun run build
 ```
 
+For the local production build, run the generated Cloudflare entry with the following command.
+
+```sh
+npx wrangler@4 dev --local --config .output/server/wrangler.json
+```
+
 Test live OCR with several real UK labels, including a numeric date, an abbreviated month and a faint dot-matrix print. Verify the printed date, label type and unreadable-label fallback before the phone demo.
