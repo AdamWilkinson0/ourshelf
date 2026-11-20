@@ -229,7 +229,7 @@ export function Kitchen({
   const [demoToday, setToday] = useState("");
   const h = shared?.state.house ?? demoHouse;
   const today = shared?.state.today ?? demoToday;
-  const houseName = shared?.name ?? "Clifton House";
+  const houseName = shared?.name ?? "Your house";
   const isShared = Boolean(shared);
   const writing = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -346,23 +346,7 @@ export function Kitchen({
       <header className="site-head">
         <div className="topbar">
           <Brand />
-          <div className="top-right">
-            <HomeLabel name={houseName} />
-            {me && (
-              <button
-                className="switch-chip"
-                aria-label={
-                  shared
-                    ? "Open profile for " + me.name
-                    : "Switch profile, current profile " + me.name
-                }
-                onClick={() => (shared ? navigate("profile") : setModal("switch"))}
-              >
-                <Avatar member={me} />
-                <span>{me.name}</span>
-              </button>
-            )}
-          </div>
+          <HomeLabel name="Your house" />
         </div>
       </header>
     );
@@ -425,12 +409,11 @@ export function Kitchen({
                   {mine.length} {mine.length === 1 ? "item" : "items"} on your shelf · {soon.length}{" "}
                   to use soon
                 </p>
-                <button className="btn hero-btn" onClick={() => navigate("scan")}>
-                  <Camera size={17} />
-                  Scan shopping
-                </button>
               </div>
-              <img src="/images/market-bag.webp" alt="Fresh groceries in a market bag" />
+              <button className="btn hero-btn" onClick={() => navigate("scan")}>
+                <Camera size={17} />
+                Scan shopping
+              </button>
             </div>
             {incoming.length > 0 && (
               <button className="request-alert" onClick={() => navigate("grabs")}>
