@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://test341.lovable.app/">Live app</a> ·
+  <a href="https://planourshelf.lovable.app/">Live app</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#tech-stack">Tech stack</a> ·
   <a href="#run-locally">Run locally</a>
